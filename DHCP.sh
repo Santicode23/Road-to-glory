@@ -9,7 +9,7 @@ read RANGO_FINAL
 # Variables de configuración
 INTERFAZ="enp0s8"  
 MASCARA="255.255.255.0"
-RUTEADOR="192.168.1.1"
+RUTEADOR="192.168.0.1"
 DNS="8.8.8.8, 8.8.4.4"
 TIEMPO_CONCESION="600" 
 
