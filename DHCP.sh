@@ -7,7 +7,7 @@ echo "Introduce el rango final de las direcciones IP "
 read RANGO_FINAL
 
 # Variables de configuración
-INTERFAZ="eth1"  
+INTERFAZ="enpOs8"  
 MASCARA="255.255.255.0"
 RUTEADOR="192.168.1.1"
 DNS="8.8.8.8, 8.8.4.4"
