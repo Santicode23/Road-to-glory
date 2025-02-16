@@ -7,6 +7,8 @@ $Gateway = Read-Host "Introduce la puerta de enlace"
 $DNS = Read-Host "Introduce los servidores DNS"
 $IPDestino = Read-Host "Introduce la dirección IP del servidor DHCP"
 
+Get-NetIPAddress -InterfaceAlias $Interfaz -AddressFamily IPv4 | Remove-NetIPAddress -Confirm:$false
+
 New-NetIPAddress -IPAddress $IPDestino -InterfaceAlias "Ethernet 2" -PrefixLength 24
 
 # Instalar el rol DHCP si no está instalado
@@ -20,7 +22,7 @@ $ScopeName = "Scope_Local"
 $ScopeID = $Subred
 
 Add-DhcpServerv4Scope -Name $ScopeName -StartRange $RangoInicio -EndRange $RangoFinal -SubnetMask $Mascara -State Active
-Set-DhcpServerv4OptionValue -ScopeId $ScopeID -Router $Gateway -DnsServer $DNS -InterfaceAlias "Ethernet"
+Set-DhcpServerv4OptionValue -ScopeId $ScopeID -Router $Gateway -DnsServer $DNS
 
 # Reiniciar el servicio DHCP
 Restart-Service DHCPServer
