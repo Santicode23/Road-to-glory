@@ -7,7 +7,7 @@ $Gateway = Read-Host "Introduce la puerta de enlace"
 $DNS = Read-Host "Introduce los servidores DNS"
 $IPDestino = Read-Host "Introduce la dirección IP del servidor DHCP"
 
-Get-NetIPAddress -InterfaceAlias $Interfaz -AddressFamily IPv4 | Remove-NetIPAddress -Confirm:$false
+Get-NetIPAddress -InterfaceAlias "Ethernet 2" -AddressFamily IPv4 | Remove-NetIPAddress -Confirm:$false
 
 New-NetIPAddress -IPAddress $IPDestino -InterfaceAlias "Ethernet 2" -PrefixLength 24
 
