@@ -5,6 +5,9 @@ $RangoFinal = Read-Host "Introduce el rango final de IP"
 $Mascara = "255.255.255.0"
 $Gateway = Read-Host "Introduce la puerta de enlace"
 $DNS = Read-Host "Introduce los servidores DNS"
+$IPDestino = Read-Host "Introduce la dirección IP del servidor DHCP"
+
+New-NetIPAddress -IPAddress $IPDestino -InterfaceAlias "Ethernet 2" -PrefixLength 24
 
 # Instalar el rol DHCP si no está instalado
 if (-not (Get-WindowsFeature -Name DHCP -ErrorAction SilentlyContinue).Installed) {
