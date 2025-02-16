@@ -20,7 +20,7 @@ $ScopeName = "Scope_Local"
 $ScopeID = $Subred
 
 Add-DhcpServerv4Scope -Name $ScopeName -StartRange $RangoInicio -EndRange $RangoFinal -SubnetMask $Mascara -State Active
-Set-DhcpServerv4OptionValue -ScopeId $ScopeID -Router $Gateway -DnsServer $DNS
+Set-DhcpServerv4OptionValue -ScopeId $ScopeID -Router $Gateway -DnsServer $DNS -InterfaceAlias "Ethernet"
 
 # Reiniciar el servicio DHCP
 Restart-Service DHCPServer
