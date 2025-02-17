@@ -1,3 +1,21 @@
+# Función para validar la dirección IP
+validate_ip() {
+    local ip=$1
+    local regex='^([0-9]{1,3}\.){3}[0-9]{1,3}$'
+    if [[ $ip =~ $regex ]]; then
+        IFS='.' read -r -a octets <<< "$ip"
+        for octet in "${octets[@]}"; do
+            if (( octet < 0 || octet > 255 )); then
+                echo "IP inválida: fuera de rango"
+                exit 1
+            fi
+        done
+    else
+        echo "Formato de IP inválido"
+        exit 1
+    fi
+}
+
 # Solicitar datos al usuario
 echo "Introduce la subred"
 read SUBRED
@@ -5,6 +23,26 @@ echo "Introduce el rango de inicio de las direcciones IP "
 read RANGO_INICIO
 echo "Introduce el rango final de las direcciones IP "
 read RANGO_FINAL
+# Solicitar la IP del servidor DHCP
+read -p "Ingrese la dirección IP del servidor DHCP: " SERVER_IP
+validate_ip $SERVER_IP
+
+#Fijar la IP
+echo "network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    enp0s3:
+      dhcp4: true
+    enp0s8:
+      addresses: [$SERVER_IP/24]
+      nameservers:
+        addresses: [8.8.8.8, 8.8.4.4]" | sudo tee /etc/netplan/50-cloud-init.yaml > /dev/null
+echo "Fijando la IP $SERVER_IP"
+
+#Aplicar cambios
+sudo netplan apply
+echo "Aplicando cambios"
 
 # Variables de configuración
 INTERFAZ="enp0s8"  
