@@ -1,4 +1,17 @@
-﻿# Verificar si OpenSSH ya está instalado
+# Detener el servicio SSH si está en ejecución
+Stop-Service sshd -Force -ErrorAction SilentlyContinue
+
+# Eliminar reglas de firewall asociadas
+Get-NetFirewallRule -Name "SSH" -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+
+# Eliminar archivos de configuración previos
+$sshConfigPath = "$env:ProgramData\ssh"
+if (Test-Path $sshConfigPath) {
+    Remove-Item -Path $sshConfigPath -Recurse -Force
+    Write-Host "Archivos de configuración eliminados."
+}
+
+# Verificar si OpenSSH ya está instalado
 $sshFeature = Get-WindowsFeature -Name OpenSSH-Server
 
 if ($sshFeature.Installed -eq $false) {
