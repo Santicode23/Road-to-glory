@@ -1,4 +1,3 @@
-# input.sh
 get_domain() {
     read -p "Ingrese el nombre del dominio: " DOMAIN
     echo $DOMAIN
