@@ -52,6 +52,15 @@ EOL
     systemctl restart vsftpd
 }
 
+# Funcion para abrir puertos en el firewall
+configure_firewall() {
+    echo "Abriendo puertos FTP en el firewall..."
+    ufw allow 20/tcp
+    ufw allow 21/tcp
+    ufw allow 40000:50000/tcp
+    ufw reload
+}
+
 # Funcion para crear grupos y carpetas
 setup_groups_and_dirs() {
     echo "Creando grupos y directorios..."
@@ -83,6 +92,7 @@ add_user() {
         echo "Opcion invalida. Usuario creado sin grupo."
     fi
     mkdir -p $FTP_USERS_DIR/$username
+    mkdir -p $MOUNT_DIR/$username
     chown $username:$username $FTP_USERS_DIR/$username
     chmod 750 $FTP_USERS_DIR/$username
     mount --bind $FTP_USERS_DIR/$username $MOUNT_DIR/$username
@@ -112,17 +122,19 @@ main_menu() {
     while true; do
         echo "\nSeleccione una opcion:"
         echo "1) Instalar y configurar vsftpd"
-        echo "2) Crear grupos y directorios"
-        echo "3) Agregar usuario"
-        echo "4) Cambiar usuario de grupo"
-        echo "5) Salir"
+        echo "2) Configurar firewall"
+        echo "3) Crear grupos y directorios"
+        echo "4) Agregar usuario"
+        echo "5) Cambiar usuario de grupo"
+        echo "6) Salir"
         read choice
         case $choice in
             1) install_vsftpd && configure_vsftpd ;;
-            2) setup_groups_and_dirs ;;
-            3) add_user ;;
-            4) change_user_group ;;
-            5) exit 0 ;;
+            2) configure_firewall ;;
+            3) setup_groups_and_dirs ;;
+            4) add_user ;;
+            5) change_user_group ;;
+            6) exit 0 ;;
             *) echo "Opcion invalida." ;;
         esac
     done
