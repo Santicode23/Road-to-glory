@@ -33,7 +33,7 @@ configure_vsftpd() {
     echo "Configurando vsftpd..."
     cp /etc/vsftpd.conf /etc/vsftpd.conf.bak
     cat > /etc/vsftpd.conf <<EOL
-anonymous_enable=NO
+anonymous_enable=YES
 local_enable=YES
 write_enable=YES
 local_umask=022
