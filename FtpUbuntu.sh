@@ -20,7 +20,7 @@ install_vsftpd() {
     enp0s3:
       dhcp4: true
     enp0s8:
-      addresses: [192.169.0.10/24]
+      addresses: [192.168.0.10/24]
       gateway4: 192.168.0.1
       nameservers:
         addresses: [8.8.8.8, 1.1.1.1]" | sudo tee /etc/netplan/50-cloud-init.yaml > /dev/null
