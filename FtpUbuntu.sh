@@ -58,6 +58,7 @@ configure_firewall() {
     ufw allow 20/tcp
     ufw allow 21/tcp
     ufw allow 40000:50000/tcp
+    ufw enable
     ufw reload
 }
 
