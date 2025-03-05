@@ -1,56 +1,27 @@
 #!/usr/bin/env bash
 
-
 source ./ftp_functions.sh
-
 clear
+configurarFTP
+habilitarAnonimo
 
-instalarftp
+echo "EL MEJOR FTP TARDE PERO SEGURO"
 
-crearanonimo
+opcion=true
+while $opcion; do
+    echo "Seleccione una opción:"
+    echo "1- Crear grupo"
+    echo "2- Crear usuario"
+    echo "3- Asignar usuario a grupo"
+    echo "4- Cambiar grupo de usuario"
+    echo "5- Salir"
+    read -p "Ingrese una opción: " seleccion
 
-
-echo "Bienvenido a la configuracion principal de ftp"
-
-ciclo=true
-while $ciclo
-do
-
-echo "¿que desea hacer"
-
-echo "1-Crear grupo"
-
-echo "2-Crear usuario"
-
-echo "3-asignar usuario-grupo"
-
-echo "4-cambiar grupo"
-
-echo "5- salir"
-
-
-read -p "elija una opcion " opc
-
-case $opc in
- 1)
-    read -p "ingrese el nombre del grupo " grupo
-    creargrupo "$grupo"
- ;;
- 2)
-    read -p "ingrese el nombre de usuario " username
-    crearuser "$username"
- ;;
- 3)
-    read -p "escriba el nombre de usuario a asignar a un grupo " user
-    read -p "escriba el nombre del grupo a asignar " grupo
-    asignargrupo "$user" "$grupo"
- ;;
- 4)
-    cambiargrupo
- ;;
- 5) 
-
-   ciclo=false
- esac
-
+    case $seleccion in
+        1) read -p "Ingrese el nombre del grupo: " nuevoGrupo; agregarGrupo "$nuevoGrupo";;
+        2) read -p "Ingrese el nombre de usuario: " nuevoUsuario; agregarUsuario "$nuevoUsuario";;
+        3) read -p "Ingrese el nombre de usuario: " usuario; read -p "Ingrese el nombre del grupo: " grupo; asignarGrupoUsuario "$usuario" "$grupo";;
+        4) cambiarGrupoUsuario;;
+        5) opcion=false;;
+    esac
 done
