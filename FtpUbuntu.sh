@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 source ./ftp_functions.sh
-clear
 configurarFTP
 habilitarAnonimo
 
