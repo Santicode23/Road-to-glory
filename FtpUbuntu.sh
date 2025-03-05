@@ -95,12 +95,6 @@ anon_root=$FTP_ROOT/anon
 EOF
 fi
 
-# Preguntar si se desea cambiar de grupo a un usuario
-read -p "¿Desea cambiar el grupo de un usuario FTP? (s/n): " RESPUESTA
-if [[ "$RESPUESTA" == "s" || "$RESPUESTA" == "S" ]]; then
-    cambiar_user_grupo
-fi
-
 # Solicitar datos
 read -p "Ingrese el nombre del usuario FTP: " FTP_USER
 read -p "Ingrese el grupo principal del usuario (ej: reprobados, recursadores): " FTP_GROUP
@@ -135,6 +129,12 @@ sudo usermod -aG "ftpusers" "$FTP_USER"
 echo "Configurando carpetas para $FTP_USER..."
 sudo mkdir -p "$USERS_DIR/$FTP_USER/publica"
 sudo mkdir -p "$USERS_DIR/$FTP_USER/$FTP_GROUP"
+
+# Llamar a la función para cambiar de grupo si es necesario
+read -p "¿Desea cambiar el grupo de un usuario FTP? (s/n): " RESPUESTA
+if [[ "$RESPUESTA" == "s" || "$RESPUESTA" == "S" ]]; then
+    cambiar_user_grupo
+fi
 
 # Enlazar carpetas con mount --bind
 sudo mkdir -p "$USERS_DIR/$FTP_USER/$FTP_USER"
