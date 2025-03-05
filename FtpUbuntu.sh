@@ -95,6 +95,12 @@ anon_root=$FTP_ROOT/anon
 EOF
 fi
 
+# Preguntar si se desea cambiar de grupo a un usuario
+read -p "¿Desea cambiar el grupo de un usuario FTP? (s/n): " RESPUESTA
+if [[ "$RESPUESTA" == "s" || "$RESPUESTA" == "S" ]]; then
+    cambiar_user_grupo
+fi
+
 # Solicitar datos
 read -p "Ingrese el nombre del usuario FTP: " FTP_USER
 read -p "Ingrese el grupo principal del usuario (ej: reprobados, recursadores): " FTP_GROUP
