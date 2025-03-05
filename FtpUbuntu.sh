@@ -19,9 +19,9 @@ sudo sed -i 's/^anonymous_enable=.*/anonymous_enable=YES/' /etc/vsftpd.conf
 sudo sed -i 's/^#\(local_enable=YES\)/\1/' /etc/vsftpd.conf
 sudo sed -i 's/^#\(write_enable=YES\)/\1/' /etc/vsftpd.conf
 sudo sed -i 's/^#\(chroot_local_user=YES\)/\1/' /etc/vsftpd.conf
+sudo tee -a $VSFTPD_CONF > /dev/null <<EOF
 allow_writeable_chroot=YES
 anon_root=$FTP_ROOT/anon
-sudo tee -a $VSFTPD_CONF > /dev/null <<EOF
 EOF
 fi
 
