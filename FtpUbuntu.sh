@@ -144,11 +144,6 @@ sudo mount --bind "$GROUPS_DIR/$FTP_GROUP" "$USERS_DIR/$FTP_USER/$FTP_GROUP"
 sudo mount --bind "$PUBLIC_DIR" "$USERS_DIR/$FTP_USER/publica"
 sudo mount --bind "$PUBLIC_DIR" "$FTP_ROOT/anon/publica"
 
-# Agregar montajes persistentes a /etc/fstab
-#echo "$USERS_DIR/$FTP_USER $USERS_DIR/$FTP_USER/$FTP_USER none bind 0 0" | sudo tee -a /etc/fstab
-# echo "$GROUPS_DIR/$FTP_GROUP $USERS_DIR/$FTP_USER/$FTP_GROUP none bind 0 0" | sudo tee -a /etc/fstab
-# echo "$PUBLIC_DIR $USERS_DIR/$FTP_USER/publica none bind 0 0" | sudo tee -a /etc/fstab
-
 sudo chmod 750 "$USERS_DIR/$FTP_USER"
 sudo chown -R "$FTP_USER:ftpusers" "$USERS_DIR/$FTP_USER"
 
