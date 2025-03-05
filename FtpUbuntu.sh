@@ -147,8 +147,6 @@ sudo mount --bind "$PUBLIC_DIR" "$FTP_ROOT/anon/publica"
 sudo chmod 750 "$USERS_DIR/$FTP_USER"
 sudo chown -R "$FTP_USER:ftpusers" "$USERS_DIR/$FTP_USER"
 
-# Asignar grupo al directorio correspondiente
-
 # Configuración individual del usuario
 echo "Configurando acceso para $FTP_USER..."
 sudo passwd -u "$FTP_USER"
