@@ -1,115 +1,56 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Verificar que se ejecute como root
-if [[ $EUID -ne 0 ]]; then
-    echo "Este script debe ejecutarse como root" 
-    exit 1
-fi
 
-# Variables principales
-FTP_ROOT="/home/ftp"
-PUBLIC_DIR="$FTP_ROOT/publica"
-USERS_DIR="$FTP_ROOT/users"
-GROUPS_DIR="$FTP_ROOT/grupos"
-VSFTPD_CONF="/etc/vsftpd.conf"
+source ./ftp_functions.sh
 
-#Verificar si ya está instalado
-if systemctl list-unit-files | grep -q "vsftpd"; then
-    echo "vsftpd ya está instalado."
-else
-    echo "Instalando vsftpd..."
-    sudo apt update && sudo apt install -y vsftpd 
-    sudo groupadd reprobados
-    sudo groupadd recursadores
-    sudo groupadd ftpusers   
-sudo sed -i 's/^anonymous_enable=.*/anonymous_enable=YES/' /etc/vsftpd.conf
-sudo sed -i 's/^#\(local_enable=YES\)/\1/' /etc/vsftpd.conf
-sudo sed -i 's/^#\(write_enable=YES\)/\1/' /etc/vsftpd.conf
-sudo sed -i 's/^#\(chroot_local_user=YES\)/\1/' /etc/vsftpd.conf
-sudo tee -a $VSFTPD_CONF > /dev/null <<EOF
-allow_writeable_chroot=YES
-anon_root=$FTP_ROOT/anon
-EOF
-fi
+clear
 
-# Solicitar datos
-read -p "Ingrese el nombre del usuario FTP: " FTP_USER
-read -p "Ingrese el grupo principal del usuario (ej: reprobados, recursadores): " FTP_GROUP
+instalarftp
 
-# Crear estructura de carpetas
-echo "Creando estructura de directorios..."
-sudo mkdir -p "$PUBLIC_DIR" "$USERS_DIR" "$GROUPS_DIR"
-sudo mkdir -p "$GROUPS_DIR/reprobados"
-sudo mkdir -p "$GROUPS_DIR/recursadores"
-sudo mkdir -p "$FTP_ROOT/anon/publica"
+crearanonimo
 
-# Asignar permisos a grupos
-echo "Configurando permisos..."
-sudo chmod 770 "$GROUPS_DIR/reprobados"
-sudo chmod 770 "$GROUPS_DIR/recursadores"
-sudo chown root:reprobados "$GROUPS_DIR/reprobados"
-sudo chown root:recursadores "$GROUPS_DIR/recursadores"
 
-# Permisos generales
-sudo chmod 755 /home/ftp
-sudo chmod 775 "$PUBLIC_DIR"
-sudo chown root:ftpusers "$PUBLIC_DIR"
+echo "Bienvenido a la configuracion principal de ftp"
 
-# Crear usuario FTP
-echo "Creando usuario $FTP_USER..."
-sudo useradd -m -d "$USERS_DIR/$FTP_USER" -s /usr/sbin/nologin "$FTP_USER"
-sudo passwd "$FTP_USER"
-sudo usermod -aG "$FTP_GROUP" "$FTP_USER"
-sudo usermod -aG "ftpusers" "$FTP_USER"
+ciclo=true
+while $ciclo
+do
 
-# Crear carpetas del usuario
-echo "Configurando carpetas para $FTP_USER..."
-sudo mkdir -p "$USERS_DIR/$FTP_USER/publica"
-sudo mkdir -p "$USERS_DIR/$FTP_USER/$FTP_GROUP"
+echo "¿que desea hacer"
 
-# Enlazar carpetas con mount --bind
-sudo mkdir -p "$USERS_DIR/$FTP_USER/$FTP_USER"
-sudo chmod 700 "$USERS_DIR/$FTP_USER/$FTP_USER"
-sudo chown -R "$FTP_USER:$FTP_USER" "$USERS_DIR/$FTP_USER/"
-sudo mount --bind "$GROUPS_DIR/$FTP_GROUP" "$USERS_DIR/$FTP_USER/$FTP_GROUP"
-sudo mount --bind "$PUBLIC_DIR" "$USERS_DIR/$FTP_USER/publica"
-sudo mount --bind "$PUBLIC_DIR" "$FTP_ROOT/anon/publica"
+echo "1-Crear grupo"
 
-sudo chmod 750 "$USERS_DIR/$FTP_USER"
-sudo chown -R "$FTP_USER:ftpusers" "$USERS_DIR/$FTP_USER"
+echo "2-Crear usuario"
 
-# Configuración individual del usuario
-echo "Configurando acceso para $FTP_USER..."
-sudo passwd -u "$FTP_USER"
-sudo usermod -s /bin/bash "$FTP_USER"
+echo "3-asignar usuario-grupo"
 
-# Reiniciar servicio vsftpd
-echo "Reiniciando servicio FTP..."
-sudo systemctl restart vsftpd
-sudo systemctl enable vsftpd
+echo "4-cambiar grupo"
 
-# Asegurar configuración del sistema
-echo "Configurando seguridad..."
-sudo chmod 755 /home/ftp
+echo "5- salir"
 
-# Abrir puertos en firewall
-echo "Configurando firewall..."
-sudo ufw allow 21/tcp
-#Fijar la IP
-echo "network:
-  version: 2
-  renderer: networkd
-  ethernets:
-    enp0s3:
-      dhcp4: true
-    enp0s8:
-      addresses: [18.0.0.10/24]
-      nameservers:
-        addresses: [8.8.8.8]" | sudo tee /etc/netplan/50-cloud-init.yaml > /dev/null
-echo "Fijando la IP"
 
-#Aplicar cambios
-sudo netplan apply
-echo "Aplicando cambios"
+read -p "elija una opcion " opc
 
-echo "Configuración completa. Prueba acceder con un cliente FTP."
+case $opc in
+ 1)
+    read -p "ingrese el nombre del grupo " grupo
+    creargrupo "$grupo"
+ ;;
+ 2)
+    read -p "ingrese el nombre de usuario " username
+    crearuser "$username"
+ ;;
+ 3)
+    read -p "escriba el nombre de usuario a asignar a un grupo " user
+    read -p "escriba el nombre del grupo a asignar " grupo
+    asignargrupo "$user" "$grupo"
+ ;;
+ 4)
+    cambiargrupo
+ ;;
+ 5) 
+
+   ciclo=false
+ esac
+
+done
