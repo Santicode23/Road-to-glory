@@ -83,74 +83,87 @@ validarUsuario(){
 
 agregarGrupo(){
     local nombreGrupo="$1"
+
     if ! validarGrupo "$nombreGrupo"; then
         echo "Nombre de grupo inválido"
-        while validarGrupo "$nombreGrupo"; do
-            read -p "Ingrese nuevamente el nombre del grupo: " nombreGrupo
-        done
+        return 1
     fi
 
     if grupoExiste "$nombreGrupo"; then
-        echo "El grupo ya existe"
-        while grupoExiste "$nombreGrupo"; do
-            read -p "Ingrese nuevamente el nombre del grupo: " nombreGrupo
-        done
+        echo "El grupo '$nombreGrupo' ya existe. Elija otro nombre."
+        return 1
     fi
 
-    sudo groupadd $nombreGrupo
-    sudo mkdir /home/servidorftp/grupos/$nombreGrupo
-    sudo chgrp $nombreGrupo /home/servidorftp/grupos/$nombreGrupo
+    sudo groupadd "$nombreGrupo"
+    sudo mkdir /home/servidorftp/grupos/"$nombreGrupo"
+    sudo chgrp "$nombreGrupo" /home/servidorftp/grupos/"$nombreGrupo"
     echo "Grupo creado correctamente."
 }
 
 agregarUsuario(){
     local nombreUsuario="$1"
+
     if ! validarUsuario "$nombreUsuario"; then
         echo "Nombre de usuario inválido"
-        while validarUsuario "$nombreUsuario"; do
-            read -p "Ingrese nuevamente el nombre del usuario: " nombreUsuario
-        done
+        return 1
     fi
 
     if usuarioExiste "$nombreUsuario"; then
-        echo "El usuario ya existe"
-        while usuarioExiste "$nombreUsuario"; do
-            read -p "Ingrese nuevamente el nombre del usuario: " nombreUsuario
-        done
+        echo "El usuario '$nombreUsuario' ya existe. Elija otro nombre."
+        return 1
     fi
 
-    sudo adduser $nombreUsuario
-    sudo mkdir -p /home/$nombreUsuario/{personal,publico}
-    sudo mkdir /home/servidorftp/usuarios/$nombreUsuario
-    sudo chmod 700 /home/$nombreUsuario/personal /home/servidorftp/usuarios/$nombreUsuario
+    sudo adduser "$nombreUsuario"
+    sudo mkdir -p /home/"$nombreUsuario"/{personal,publico}
+    sudo mkdir /home/servidorftp/usuarios/"$nombreUsuario"
+    sudo chmod 700 /home/"$nombreUsuario"/personal /home/servidorftp/usuarios/"$nombreUsuario"
     sudo chmod 777 /home/servidorftp/publico
-    sudo chown $nombreUsuario /home/servidorftp/usuarios/$nombreUsuario
-    sudo chown $nombreUsuario /home/$nombreUsuario/personal
-    sudo mount --bind /home/servidorftp/usuarios/$nombreUsuario /home/$nombreUsuario/personal
-    sudo mount --bind /home/servidorftp/publico /home/$nombreUsuario/publico
+    sudo chown "$nombreUsuario" /home/servidorftp/usuarios/"$nombreUsuario"
+    sudo chown "$nombreUsuario" /home/"$nombreUsuario"/personal
+    sudo mount --bind /home/servidorftp/usuarios/"$nombreUsuario" /home/"$nombreUsuario"/personal
+    sudo mount --bind /home/servidorftp/publico /home/"$nombreUsuario"/publico
     echo "Usuario creado exitosamente."
 }
 
 asignarGrupoUsuario(){
     local usuario="$1"
     local grupo="$2"
-    sudo adduser $usuario $grupo
-    sudo chmod 774 /home/servidorftp/grupos/$grupo
-    sudo mkdir /home/$usuario/$grupo
-    sudo mount --bind /home/servidorftp/grupos/$grupo /home/$usuario/$grupo
+
+    if ! usuarioExiste "$usuario"; then
+        echo "El usuario '$usuario' no existe."
+        return 1
+    fi
+    if ! grupoExiste "$grupo"; then
+        echo "El grupo '$grupo' no existe."
+        return 1
+    fi
+
+    sudo adduser "$usuario" "$grupo"
+    sudo chmod 774 /home/servidorftp/grupos/"$grupo"
+    sudo mount --bind /home/servidorftp/grupos/"$grupo" /home/"$usuario"/"$grupo"
     echo "Grupo asignado correctamente."
 }
 
 cambiarGrupoUsuario(){
     read -p "Ingrese el usuario a cambiar de grupo: " usuario
     read -p "Ingrese el nuevo grupo: " nuevoGrupo
-    grupoAnterior=$(groups "$usuario" | awk '{print $5}')
-    sudo umount /home/$usuario/$grupoAnterior || { echo "Error al desmontar directorio."; exit 1; }
-    sudo deluser $usuario $grupoAnterior
-    sudo adduser $usuario $nuevoGrupo
-    sudo mv /home/$usuario/$grupoAnterior /home/$usuario/$nuevoGrupo
-    sudo mount --bind /home/servidorftp/grupos/$nuevoGrupo /home/$usuario/$nuevoGrupo
-    sudo chgrp $nuevoGrupo /home/$usuario/$nuevoGrupo
+
+    if ! usuarioExiste "$usuario"; then
+        echo "El usuario '$usuario' no existe."
+        return 1
+    fi
+    if ! grupoExiste "$nuevoGrupo"; then
+        echo "El grupo '$nuevoGrupo' no existe."
+        return 1
+    fi
+
+    grupoAnterior=$(id -gn "$usuario")
+
+    sudo umount /home/"$usuario"/"$grupoAnterior" || { echo "Error al desmontar directorio."; exit 1; }
+    sudo deluser "$usuario" "$grupoAnterior"
+    sudo adduser "$usuario" "$nuevoGrupo"
+    sudo mount --bind /home/servidorftp/grupos/"$nuevoGrupo" /home/"$usuario"/"$nuevoGrupo"
+    sudo chgrp "$nuevoGrupo" /home/"$usuario"/"$nuevoGrupo"
     echo "Grupo cambiado exitosamente."
 }
 
