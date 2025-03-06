@@ -114,15 +114,15 @@ agregarUsuario(){
 
     sudo adduser $nombreUsuario
     sudo mkdir /home/$nombreUsuario/$nombreUsuario
-    sudo mkdir /home/ftp/usuarios/$nombreUsuario
+    sudo mkdir /home/servidorftp/usuarios/$nombreUsuario
     sudo chmod 700 /home/$nombreUsuario/$nombreUsuario
-    sudo chmod 700 /home/ftp/usuarios/$nombreUsuario
-    sudo chmod 777 /home/ftp/publica
+    sudo chmod 700 /home/servidorftp/usuarios/$nombreUsuario
+    sudo chmod 777 /home/servidorftp/publica
     sudo mkdir /home/$nombreUsuario/publica
-    sudo chown $nombreUsuario /home/ftp/usuarios/$nombreUsuario
+    sudo chown $nombreUsuario /home/servidorftp/usuarios/$nombreUsuario
     sudo chown $nombreUsuario /home/$nombreUsuario/$nombreUsuario
-    sudo mount --bind /home/ftp/usuarios/$nombreUsuario /home/$nombreUsuario/$nombreUsuario
-    sudo mount --bind /home/ftp/publica /home/$nombreUsuario/publica
+    sudo mount --bind /home/servidorftp/usuarios/$nombreUsuario /home/$nombreUsuario/$nombreUsuario
+    sudo mount --bind /home/servidorftp/publica /home/$nombreUsuario/publica
     echo "Usuario creado exitosamente."
 }
 
