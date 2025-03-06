@@ -17,10 +17,72 @@ while $opcion; do
     read -p "Ingrese una opción: " seleccion
 
     case $seleccion in
-        1) read -p "Ingrese el nombre del grupo: " nuevoGrupo; agregarGrupo "$nuevoGrupo";;
-        2) read -p "Ingrese el nombre de usuario: " nuevoUsuario; agregarUsuario "$nuevoUsuario";;
-        3) read -p "Ingrese el nombre de usuario: " usuario; read -p "Ingrese el nombre del grupo: " grupo; asignarGrupoUsuario "$usuario" "$grupo";;
-        4) cambiarGrupoUsuario;;
-        5) opcion=false;;
+        1)  
+            while true; do
+                read -p "Ingrese el nombre del grupo: " nuevoGrupo
+                if ! validarGrupo "$nuevoGrupo"; then
+                    continue
+                fi
+                if grupoExiste "$nuevoGrupo"; then
+                    echo "El grupo '$nuevoGrupo' ya existe. Elija otro nombre."
+                    continue
+                fi
+                break
+            done
+            agregarGrupo "$nuevoGrupo"
+            ;;
+        2)  
+            while true; do
+                read -p "Ingrese el nombre de usuario: " nuevoUsuario
+                if ! validarUsuario "$nuevoUsuario"; then
+                    continue
+                fi
+                if usuarioExiste "$nuevoUsuario"; then
+                    echo "El usuario '$nuevoUsuario' ya existe. Elija otro nombre."
+                    continue
+                fi
+                break
+            done
+            agregarUsuario "$nuevoUsuario"
+            ;;
+        3)  
+            while true; do
+                read -p "Ingrese el nombre de usuario: " usuario
+                if ! usuarioExiste "$usuario"; then
+                    echo "El usuario '$usuario' no existe. Inténtelo de nuevo."
+                    continue
+                fi
+                read -p "Ingrese el nombre del grupo: " grupo
+                if ! grupoExiste "$grupo"; then
+                    echo "El grupo '$grupo' no existe. Inténtelo de nuevo."
+                    continue
+                fi
+                break
+            done
+            asignarGrupoUsuario "$usuario" "$grupo"
+            ;;
+        4)  
+            while true; do
+                read -p "Ingrese el usuario a cambiar de grupo: " usuario
+                if ! usuarioExiste "$usuario"; then
+                    echo "El usuario '$usuario' no existe. Inténtelo de nuevo."
+                    continue
+                fi
+                read -p "Ingrese el nuevo grupo: " nuevoGrupo
+                if ! grupoExiste "$nuevoGrupo"; then
+                    echo "El grupo '$nuevoGrupo' no existe. Inténtelo de nuevo."
+                    continue
+                fi
+                break
+            done
+            cambiarGrupoUsuario "$usuario" "$nuevoGrupo"
+            ;;
+        5)  
+            opcion=false
+            echo "Saliendo del programa..."
+            ;;
+        *)  
+            echo "Opción inválida, intente de nuevo."
+            ;;
     esac
 done
