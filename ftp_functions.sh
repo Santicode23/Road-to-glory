@@ -137,6 +137,8 @@ asignarGrupoUsuario(){
         echo "El grupo '$grupo' no existe."
         return 1
     fi
+    # Obtener grupo actual del usuario
+    grupoActual=$(id -gn "$usuario")
 
     if [[ "$grupoActual" != "$usuario" ]]; then
         echo "El usuario '$usuario' ya pertenece al grupo '$grupoActual'."
