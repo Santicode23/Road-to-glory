@@ -48,21 +48,37 @@ habilitarAnonimo(){
 validarGrupo(){
     local nombreGrupo="$1"
     local limite=20
-    if [ -n "$nombreGrupo" ] && [ ${#nombreGrupo} -le $limite ]; then
+    if [[ -z "$nombreGrupo" ]]; then
+        echo "El nombre del grupo no puede estar vacío."
         return 1
-    else
-        return 0
     fi
+    if [[ ! "$nombreGrupo" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+        echo "El nombre del grupo solo puede contener letras, números, guiones o guion bajo."
+        return 1
+    fi
+    if [[ ${#nombreGrupo} -gt $limite ]]; then
+        echo "El nombre del grupo no puede exceder los $limite caracteres."
+        return 1
+    fi
+    return 0
 }
 
 validarUsuario(){
     local nombreUsuario="$1"
     local limite=20
-    if [ -n "$nombreUsuario" ] && [ ${#nombreUsuario} -le $limite ]; then
+    if [[ -z "$nombreUsuario" ]]; then
+        echo "El nombre del usuario no puede estar vacío."
         return 1
-    else
-        return 0
     fi
+    if [[ ! "$nombreUsuario" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+        echo "El nombre del usuario solo puede contener letras, números, guiones o guion bajo."
+        return 1
+    fi
+    if [[ ${#nombreUsuario} -gt $limite ]]; then
+        echo "El nombre del usuario no puede exceder los $limite caracteres."
+        return 1
+    fi
+    return 0
 }
 
 agregarGrupo(){
@@ -140,12 +156,18 @@ cambiarGrupoUsuario(){
 
 usuarioExiste(){
     local usuario="$1"
-    id "$usuario" &> /dev/null
-    return $?
+    if id "$usuario" &>/dev/null; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 grupoExiste(){
     local grupo="$1"
-    getent group "$grupo" > /dev/null 2>&1
-    return $?
+    if getent group "$grupo" > /dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
 }
