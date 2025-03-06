@@ -137,10 +137,11 @@ asignarGrupoUsuario(){
         echo "El grupo '$grupo' no existe."
         return 1
     fi
-    # Obtener todos los grupos del usuario excepto su grupo principal
-    gruposUsuario=$(id -Gn "$usuario" | tr ' ' '\n' | grep -v "^$usuario$" | grep -v "^general$")
+    
+    # Obtener todos los grupos del usuario 
+    gruposUsuario=$(id -Gn "$usuario" | tr ' ' '\n' | grep -Ev "^(users|general|$usuario)$")
 
-    # Verificar si ya pertenece a un grupo distinto de "general"
+    # Si el usuario ya tiene un grupo de trabajo, bloquear la asignación a otro
     if [[ -n "$gruposUsuario" ]]; then
         echo "El usuario '$usuario' ya pertenece al grupo '$gruposUsuario'."
         echo "Si desea cambiar de grupo, use la opción correspondiente."
