@@ -167,14 +167,30 @@ cambiarGrupoUsuario(){
         return 1
     fi
 
-    grupoAnterior=$(groups "$usuario" | awk '{print $5}')
-    sudo umount /home/$usuario/$grupoAnterior || { echo "Error al desmontar directorio."; exit 1; }
-    sudo deluser $usuario $grupoAnterior
-    sudo adduser $usuario $nuevoGrupo
-    sudo mv /home/$usuario/$grupoAnterior /home/$usuario/$nuevoGrupo
-    sudo mount --bind /home/servidorftp/grupos/$nuevoGrupo /home/$usuario/$nuevoGrupo
-    sudo chgrp $nuevoGrupo /home/$usuario/$nuevoGrupo
-    echo "Grupo cambiado exitosamente."
+    # Obtener el grupo actual del usuario
+    grupoAnterior=$(id -Gn "$usuario" | tr ' ' '\n' | grep -Ev "^(users|general|$usuario)$")
+
+    # Si no tiene un grupo anterior, no es necesario eliminarlo
+    if [[ -z "$grupoAnterior" ]]; then
+        echo "El usuario '$usuario' no pertenece a ningún grupo de trabajo."
+    else
+        # Desmontar el grupo anterior si está montado
+        if mountpoint -q /home/"$usuario"/"$grupoAnterior"; then
+            sudo umount /home/"$usuario"/"$grupoAnterior"
+        fi
+
+        # Eliminar al usuario del grupo anterior
+        sudo deluser "$usuario" "$grupoAnterior"
+        echo "Usuario eliminado del grupo '$grupoAnterior'."
+    fi
+
+    # Asignar el usuario al nuevo grupo
+    sudo adduser "$usuario" "$nuevoGrupo"
+    sudo mkdir -p /home/"$usuario"/"$nuevoGrupo"
+    sudo mount --bind /home/servidorftp/grupos/"$nuevoGrupo" /home/"$usuario"/"$nuevoGrupo"
+    sudo chgrp "$nuevoGrupo" /home/"$usuario"/"$nuevoGrupo"
+
+    echo "Grupo cambiado exitosamente a '$nuevoGrupo'."
 }
 
 usuarioExiste(){
