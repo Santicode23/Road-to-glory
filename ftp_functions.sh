@@ -138,6 +138,12 @@ asignarGrupoUsuario(){
         return 1
     fi
 
+    if [[ "$grupoActual" != "$usuario" ]]; then
+        echo "El usuario '$usuario' ya pertenece al grupo '$grupoActual'."
+        echo "Si desea cambiar de grupo, use la opción correspondiente."
+        return 1
+    fi
+
     sudo adduser $usuario $grupo
     sudo chmod 774 /home/servidorftp/grupos/$grupo
     sudo mkdir /home/$usuario/$grupo
