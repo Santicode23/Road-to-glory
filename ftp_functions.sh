@@ -94,9 +94,9 @@ agregarGrupo(){
         return 1
     fi
 
-    sudo groupadd "$nombreGrupo"
-    sudo mkdir /home/servidorftp/grupos/"$nombreGrupo"
-    sudo chgrp "$nombreGrupo" /home/servidorftp/grupos/"$nombreGrupo"
+    sudo groupadd $nombreGrupo
+    sudo mkdir /home/servidorftp/grupos/$nombreGrupo
+    sudo chgrp $nombreGrupo /home/servidorftp/grupos/$nombreGrupo
     echo "Grupo creado correctamente."
 }
 
@@ -113,15 +113,15 @@ agregarUsuario(){
         return 1
     fi
 
-    sudo adduser "$nombreUsuario"
-    sudo mkdir -p /home/"$nombreUsuario"/{personal,publico}
-    sudo mkdir /home/servidorftp/usuarios/"$nombreUsuario"
-    sudo chmod 700 /home/"$nombreUsuario"/personal /home/servidorftp/usuarios/"$nombreUsuario"
+    sudo adduser $nombreUsuario
+    sudo mkdir -p /home/$nombreUsuario/{personal,publico}
+    sudo mkdir /home/servidorftp/usuarios/$nombreUsuario
+    sudo chmod 700 /home/$nombreUsuario/personal /home/servidorftp/usuarios/$nombreUsuario
     sudo chmod 777 /home/servidorftp/publico
-    sudo chown "$nombreUsuario" /home/servidorftp/usuarios/"$nombreUsuario"
-    sudo chown "$nombreUsuario" /home/"$nombreUsuario"/personal
-    sudo mount --bind /home/servidorftp/usuarios/"$nombreUsuario" /home/"$nombreUsuario"/personal
-    sudo mount --bind /home/servidorftp/publico /home/"$nombreUsuario"/publico
+    sudo chown $nombreUsuario /home/servidorftp/usuarios/$nombreUsuario
+    sudo chown $nombreUsuario /home/$nombreUsuario/personal
+    sudo mount --bind /home/servidorftp/usuarios/$nombreUsuario /home/$nombreUsuario/personal
+    sudo mount --bind /home/servidorftp/publico /home/$nombreUsuario/publico
     echo "Usuario creado exitosamente."
 }
 
@@ -138,9 +138,10 @@ asignarGrupoUsuario(){
         return 1
     fi
 
-    sudo adduser "$usuario" "$grupo"
-    sudo chmod 774 /home/servidorftp/grupos/"$grupo"
-    sudo mount --bind /home/servidorftp/grupos/"$grupo" /home/"$usuario"/"$grupo"
+    sudo adduser $usuario $grupo
+    sudo chmod 774 /home/servidorftp/grupos/$grupo
+    sudo mkdir /home/$usuario/$grupo
+    sudo mount --bind /home/servidorftp/grupos/$grupo /home/$usuario/$grupo
     echo "Grupo asignado correctamente."
 }
 
