@@ -101,44 +101,30 @@ agregarGrupo(){
 
 agregarUsuario(){
     local nombreUsuario="$1"
-
-    if ! validarUsuario "$nombreUsuario"; then
+    if validarUsuario "$nombreUsuario"; then
         echo "Nombre de usuario inválido"
-        return 1
+        while validarUsuario "$nombreUsuario"; do
+            read -p "Ingrese nuevamente el nombre del usuario: " nombreUsuario
+        done
     fi
 
     if usuarioExiste "$nombreUsuario"; then
-        echo "El usuario '$nombreUsuario' ya existe. Elija otro nombre."
-        return 1
+        echo "El usuario ya existe"
+        while usuarioExiste "$nombreUsuario"; do
+            read -p "Ingrese nuevamente el nombre del usuario: " nombreUsuario
+        done
     fi
 
-    # Crear usuario sin acceso a /home general
     sudo adduser $nombreUsuario
-
-    # Crear las carpetas necesarias
     sudo mkdir -p /home/$nombreUsuario/{personal,publico}
-
-    # Asignar permisos adecuados
-    sudo chown root:root /home/$nombreUsuario   # Impedir acceso fuera de sus carpetas
-    sudo chmod 755 /home/$nombreUsuario         # Permitir solo lectura y ejecución
-
-    sudo chown $nombreUsuario:$nombreUsuario /home/$nombreUsuario/{personal,publico}
-    sudo chmod 700 /home/$nombreUsuario/personal
-    sudo chmod 755 /home/$nombreUsuario/publico
-
-    # Configurar acceso a servidor FTP
-    sudo mkdir -p /home/servidorftp/usuarios/$nombreUsuario
-    sudo chown $nombreUsuario:$nombreUsuario /home/servidorftp/usuarios/$nombreUsuario
-    sudo chmod 700 /home/servidorftp/usuarios/$nombreUsuario
-
-    # Montar las carpetas en su home
+    sudo mkdir /home/servidorftp/usuarios/$nombreUsuario
+    sudo chmod 700 /home/$nombreUsuario/personal /home/servidorftp/usuarios/$nombreUsuario
+    sudo chmod 777 /home/servidorftp/publico
+    sudo chown $nombreUsuario /home/servidorftp/usuarios/$nombreUsuario
+    sudo chown $nombreUsuario /home/$nombreUsuario/personal
     sudo mount --bind /home/servidorftp/usuarios/$nombreUsuario /home/$nombreUsuario/personal
     sudo mount --bind /home/servidorftp/publico /home/$nombreUsuario/publico
-
-    # Configurar vsftpd para que el usuario esté bloqueado en su carpeta
-    echo "$nombreUsuario" | sudo tee -a /etc/vsftpd.chroot_list > /dev/null
-
-    echo "Usuario '$nombreUsuario' creado exitosamente con acceso solo a personal, publico y su grupo."
+    echo "Usuario creado exitosamente."
 }
 
 asignarGrupoUsuario(){
