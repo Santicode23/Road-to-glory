@@ -167,7 +167,7 @@ cambiarGrupoUsuario(){
         return 1
     fi
 
-    # Obtener el grupo actual del usuario (excluyendo users y general)
+    # Obtener el grupo actual del usuario
     grupoAnterior=$(id -Gn "$usuario" | tr ' ' '\n' | grep -Ev "^(users|general|$usuario)$")
 
     if [[ -n "$grupoAnterior" ]]; then
