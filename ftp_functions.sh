@@ -112,27 +112,33 @@ agregarUsuario(){
         return 1
     fi
 
-    sudo adduser $nombreUsuario
+    # Crear usuario sin acceso a /home general
+    sudo adduser --home /home/$nombreUsuario --shell /bin/false $nombreUsuario
+
+    # Crear las carpetas necesarias
     sudo mkdir -p /home/$nombreUsuario/{personal,publico}
-    sudo mkdir /home/servidorftp/usuarios/$nombreUsuario
-    sudo chmod 700 /home/$nombreUsuario/personal /home/servidorftp/usuarios/$nombreUsuario
-    sudo chmod 777 /home/servidorftp/publico
-    sudo chown $nombreUsuario /home/servidorftp/usuarios/$nombreUsuario
-    sudo chown $nombreUsuario /home/$nombreUsuario/personal
+
+    # Asignar permisos adecuados
+    sudo chown root:root /home/$nombreUsuario   # Impedir acceso fuera de sus carpetas
+    sudo chmod 755 /home/$nombreUsuario         # Permitir solo lectura y ejecución
+
+    sudo chown $nombreUsuario:$nombreUsuario /home/$nombreUsuario/{personal,publico}
+    sudo chmod 700 /home/$nombreUsuario/personal
+    sudo chmod 755 /home/$nombreUsuario/publico
+
+    # Configurar acceso a servidor FTP
+    sudo mkdir -p /home/servidorftp/usuarios/$nombreUsuario
+    sudo chown $nombreUsuario:$nombreUsuario /home/servidorftp/usuarios/$nombreUsuario
+    sudo chmod 700 /home/servidorftp/usuarios/$nombreUsuario
+
+    # Montar las carpetas en su home
     sudo mount --bind /home/servidorftp/usuarios/$nombreUsuario /home/$nombreUsuario/personal
     sudo mount --bind /home/servidorftp/publico /home/$nombreUsuario/publico
 
-    # Configurar chroot para restringir el acceso a otras carpetas
-    echo "$nombreUsuario" | sudo tee -a /etc/vsftpd.chroot_list
-    sudo sed -i 's/^chroot_local_user=.*/chroot_local_user=YES/g' /etc/vsftpd.conf
-    sudo sed -i 's/^allow_writeable_chroot=.*/allow_writeable_chroot=YES/g' /etc/vsftpd.conf
-    echo "chroot_list_enable=YES" | sudo tee -a /etc/vsftpd.conf
-    echo "chroot_list_file=/etc/vsftpd.chroot_list" | sudo tee -a /etc/vsftpd.conf
+    # Configurar vsftpd para que el usuario esté bloqueado en su carpeta
+    echo "$nombreUsuario" | sudo tee -a /etc/vsftpd.chroot_list > /dev/null
 
-    sudo chown root:root /home/$nombreUsuario
-    sudo chmod 755 /home/$nombreUsuario
-    
-    echo "Usuario creado exitosamente."
+    echo "Usuario '$nombreUsuario' creado exitosamente con acceso solo a personal, publico y su grupo."
 }
 
 asignarGrupoUsuario(){
