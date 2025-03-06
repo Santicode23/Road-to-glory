@@ -121,6 +121,14 @@ agregarUsuario(){
     sudo chown $nombreUsuario /home/$nombreUsuario/personal
     sudo mount --bind /home/servidorftp/usuarios/$nombreUsuario /home/$nombreUsuario/personal
     sudo mount --bind /home/servidorftp/publico /home/$nombreUsuario/publico
+
+    # Configurar chroot para restringir el acceso a otras carpetas
+    echo "$nombreUsuario" | sudo tee -a /etc/vsftpd.chroot_list
+    sudo sed -i 's/^chroot_local_user=.*/chroot_local_user=YES/g' /etc/vsftpd.conf
+    sudo sed -i 's/^allow_writeable_chroot=.*/allow_writeable_chroot=YES/g' /etc/vsftpd.conf
+    echo "chroot_list_enable=YES" | sudo tee -a /etc/vsftpd.conf
+    echo "chroot_list_file=/etc/vsftpd.chroot_list" | sudo tee -a /etc/vsftpd.conf
+    
     echo "Usuario creado exitosamente."
 }
 
