@@ -47,7 +47,7 @@ habilitarAnonimo(){
 
 validarGrupo(){
     local nombreGrupo="$1"
-    local limite=20
+    local limite=15
     if [[ -z "$nombreGrupo" ]]; then
         echo "El nombre del grupo no puede estar vacío."
         return 1
