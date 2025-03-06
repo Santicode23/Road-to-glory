@@ -83,7 +83,7 @@ validarUsuario(){
 
 agregarGrupo(){
     local nombreGrupo="$1"
-    if validarGrupo "$nombreGrupo"; then
+    if ! validarGrupo "$nombreGrupo"; then
         echo "Nombre de grupo inválido"
         while validarGrupo "$nombreGrupo"; do
             read -p "Ingrese nuevamente el nombre del grupo: " nombreGrupo
@@ -105,7 +105,7 @@ agregarGrupo(){
 
 agregarUsuario(){
     local nombreUsuario="$1"
-    if validarUsuario "$nombreUsuario"; then
+    if ! validarUsuario "$nombreUsuario"; then
         echo "Nombre de usuario inválido"
         while validarUsuario "$nombreUsuario"; do
             read -p "Ingrese nuevamente el nombre del usuario: " nombreUsuario
