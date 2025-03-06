@@ -167,28 +167,31 @@ cambiarGrupoUsuario(){
         return 1
     fi
 
-    # Obtener el grupo actual del usuario
+    # Obtener el grupo actual del usuario (excluyendo users y general)
     grupoAnterior=$(id -Gn "$usuario" | tr ' ' '\n' | grep -Ev "^(users|general|$usuario)$")
 
-    # Si no tiene un grupo anterior, no es necesario eliminarlo
-    if [[ -z "$grupoAnterior" ]]; then
-        echo "El usuario '$usuario' no pertenece a ningún grupo de trabajo."
-    else
-        # Desmontar el grupo anterior si está montado
-        if mountpoint -q /home/"$usuario"/"$grupoAnterior"; then
-            sudo umount /home/"$usuario"/"$grupoAnterior"
+    if [[ -n "$grupoAnterior" ]]; then
+        echo "El usuario pertenece actualmente a '$grupoAnterior'. Eliminándolo..."
+
+        # Desmontar la carpeta del grupo anterior si está montada
+        if mountpoint -q "/home/$usuario/$grupoAnterior"; then
+            sudo umount "/home/$usuario/$grupoAnterior"
         fi
 
         # Eliminar al usuario del grupo anterior
         sudo deluser "$usuario" "$grupoAnterior"
-        echo "Usuario eliminado del grupo '$grupoAnterior'."
+
+        # Eliminar la carpeta del grupo anterior si aún existe
+        if [[ -d "/home/$usuario/$grupoAnterior" ]]; then
+            sudo rm -rf "/home/$usuario/$grupoAnterior"
+        fi
     fi
 
     # Asignar el usuario al nuevo grupo
     sudo adduser "$usuario" "$nuevoGrupo"
-    sudo mkdir -p /home/"$usuario"/"$nuevoGrupo"
-    sudo mount --bind /home/servidorftp/grupos/"$nuevoGrupo" /home/"$usuario"/"$nuevoGrupo"
-    sudo chgrp "$nuevoGrupo" /home/"$usuario"/"$nuevoGrupo"
+    sudo mkdir -p "/home/$usuario/$nuevoGrupo"
+    sudo mount --bind "/home/servidorftp/grupos/$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
+    sudo chgrp "$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
 
     echo "Grupo cambiado exitosamente a '$nuevoGrupo'."
 }
