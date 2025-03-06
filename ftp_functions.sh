@@ -168,13 +168,13 @@ cambiarGrupoUsuario(){
         return 1
     fi
 
-    grupoAnterior=$(id -gn "$usuario")
-
-    sudo umount /home/"$usuario"/"$grupoAnterior" || { echo "Error al desmontar directorio."; exit 1; }
-    sudo deluser "$usuario" "$grupoAnterior"
-    sudo adduser "$usuario" "$nuevoGrupo"
-    sudo mount --bind /home/servidorftp/grupos/"$nuevoGrupo" /home/"$usuario"/"$nuevoGrupo"
-    sudo chgrp "$nuevoGrupo" /home/"$usuario"/"$nuevoGrupo"
+    grupoAnterior=$(groups "$usuario" | awk '{print $5}')
+    sudo umount /home/$usuario/$grupoAnterior || { echo "Error al desmontar directorio."; exit 1; }
+    sudo deluser $usuario $grupoAnterior
+    sudo adduser $usuario $nuevoGrupo
+    sudo mv /home/$usuario/$grupoAnterior /home/$usuario/$nuevoGrupo
+    sudo mount --bind /home/servidorftp/grupos/$nuevoGrupo /home/$usuario/$nuevoGrupo
+    sudo chgrp $nuevoGrupo /home/$usuario/$nuevoGrupo
     echo "Grupo cambiado exitosamente."
 }
 
