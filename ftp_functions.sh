@@ -128,6 +128,9 @@ agregarUsuario(){
     sudo sed -i 's/^allow_writeable_chroot=.*/allow_writeable_chroot=YES/g' /etc/vsftpd.conf
     echo "chroot_list_enable=YES" | sudo tee -a /etc/vsftpd.conf
     echo "chroot_list_file=/etc/vsftpd.chroot_list" | sudo tee -a /etc/vsftpd.conf
+
+    sudo chown root:root /home/$nombreUsuario
+    sudo chmod 755 /home/$nombreUsuario
     
     echo "Usuario creado exitosamente."
 }
