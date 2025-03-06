@@ -113,7 +113,7 @@ agregarUsuario(){
     fi
 
     # Crear usuario sin acceso a /home general
-    sudo adduser --home /home/$nombreUsuario --shell /bin/false $nombreUsuario
+    sudo adduser $nombreUsuario
 
     # Crear las carpetas necesarias
     sudo mkdir -p /home/$nombreUsuario/{personal,publico}
