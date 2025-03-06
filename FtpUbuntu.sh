@@ -66,12 +66,10 @@ while $opcion; do
                 read -p "Ingrese el usuario a cambiar de grupo: " usuario
                 if ! usuarioExiste "$usuario"; then
                     echo "El usuario '$usuario' no existe. Inténtelo de nuevo."
-                    continue
                 fi
                 read -p "Ingrese el nuevo grupo: " nuevoGrupo
                 if ! grupoExiste "$nuevoGrupo"; then
                     echo "El grupo '$nuevoGrupo' no existe. Inténtelo de nuevo."
-                    continue
                 fi
                 break
             done
