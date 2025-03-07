@@ -1,6 +1,6 @@
 # Importa las funciones necesarias
-. .\Funciones_Usuario.ps1
-. .\Configuracion_FTP.ps1
+. .\Ftp_function.ps1
+. .\Ftp_config.ps1
 
 # Función para mostrar el menú principal
 function Mostrar-MenuPrincipal {
