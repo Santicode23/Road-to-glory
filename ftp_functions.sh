@@ -179,23 +179,19 @@ cambiarGrupoUsuario(){
         return 1
     fi
 
-    # Detectar el grupo actual del usuario
-    grupo_actual=""
+    # Obtener el grupo actual del usuario
+    grupo_actual=$(id -gn "$usuario")
     usuario_path="/home/$usuario"
 
-    if [[ -d "$usuario_path/reprobados" ]]; then
-        grupo_actual="reprobados"
-    elif [[ -d "$usuario_path/recursadores" ]]; then
-        grupo_actual="recursadores"
-    else
-        echo "El usuario no tiene grupo asignado."
+    if [[ "$grupo_actual" != "reprobados" && "$grupo_actual" != "recursadores" ]]; then
+        echo "El usuario no tiene un grupo válido asignado."
         return 1
     fi
 
     # Pedir el nuevo grupo
     read -p "Ingrese el nuevo grupo: " nuevoGrupo
-    if ! grupoExiste "$nuevoGrupo"; then
-        echo "El grupo '$nuevoGrupo' no existe."
+    if [[ "$nuevoGrupo" != "reprobados" && "$nuevoGrupo" != "recursadores" ]]; then
+        echo "Solo se pueden asignar los grupos 'reprobados' o 'recursadores'."
         return 1
     fi
 
@@ -204,21 +200,25 @@ cambiarGrupoUsuario(){
         return 1
     fi
 
-    # Desmontar la carpeta del grupo anterior si está montada
-    if mountpoint -q "$usuario_path/$grupo_actual"; then
-        echo "Desmontando carpeta de grupo anterior: $grupo_actual"
-        sudo fuser -k "$usuario_path/$grupo_actual" || true
-        sudo umount -l "$usuario_path/$grupo_actual"
-    fi
+    # Desmontar todas las carpetas de grupo antes de cambiar
+    for grupo in reprobados recursadores; do
+        if mountpoint -q "$usuario_path/$grupo"; then
+            echo "Desmontando carpeta: $grupo"
+            sudo fuser -k "$usuario_path/$grupo" || true
+            sudo umount -l "$usuario_path/$grupo"
+            sudo rm -rf "$usuario_path/$grupo"  # Eliminar solo la carpeta del grupo
+        fi
+    done
 
-    # Remover al usuario del grupo anterior
-    sudo deluser "$usuario" "$grupo_actual"
+    # Remover al usuario de todos los grupos de trabajo
+    sudo deluser "$usuario" "reprobados"
+    sudo deluser "$usuario" "recursadores"
 
     # Asignar al usuario el nuevo grupo
     sudo usermod -g "$nuevoGrupo" "$usuario"
     sudo adduser "$usuario" "$nuevoGrupo"
 
-    # Asegurar que la carpeta del nuevo grupo existe y asignar permisos
+    # Asegurar que solo tenga acceso a su grupo actual
     sudo mkdir -p "$usuario_path/$nuevoGrupo"
     sudo chown "$usuario:$nuevoGrupo" "$usuario_path/$nuevoGrupo"
     sudo chmod 770 "$usuario_path/$nuevoGrupo"
@@ -227,14 +227,14 @@ cambiarGrupoUsuario(){
     echo "Montando carpeta del nuevo grupo: $nuevoGrupo"
     sudo mount --bind "/home/servidorftp/grupos/$nuevoGrupo" "$usuario_path/$nuevoGrupo"
 
-    # Actualizar permisos de archivos
-    sudo chown -R "$usuario:$nuevoGrupo" "$usuario_path"
-    sudo chmod -R 770 "$usuario_path"
+    # Verificación final
+    echo "[DEBUG] Grupos actuales del usuario:"
+    id "$usuario"
 
     # Reiniciar servicio FTP para aplicar cambios
     sudo systemctl restart vsftpd
 
-    echo "El usuario '$usuario' ahora pertenece a '$nuevoGrupo'."
+    echo "El usuario '$usuario' ahora pertenece a '$nuevoGrupo' y solo puede ver su carpeta correspondiente."
 }
 
 usuarioExiste(){
