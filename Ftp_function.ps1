@@ -149,14 +149,14 @@ function Mover-Usuario {
     # Agrega al usuario al nuevo grupo
     net localgroup "$NuevoGrupo" "$NombreUsuario" /add
 
-    # 🔹 Elimina el enlace simbólico del grupo anterior en su carpeta personal
+    #Elimina el enlace simbólico del grupo anterior en su carpeta personal
     $rutaSimbolicaAntigua = "C:\FTP\LocalUser\$NombreUsuario\$grupoActual"
     
     if (Test-Path $rutaSimbolicaAntigua) {
         cmd /c rmdir "$rutaSimbolicaAntigua"
     }
 
-    # 🔹 Crea un nuevo enlace simbólico al nuevo grupo
+    #Crea un nuevo enlace simbólico al nuevo grupo
     cmd /c mklink /D "C:\FTP\LocalUser\$NombreUsuario\$NuevoGrupo" "C:\FTP\$NuevoGrupo"
 
     # Verifica si el servicio FTP está corriendo antes de reiniciarlo
