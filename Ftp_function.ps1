@@ -25,7 +25,7 @@ function Validar-Grupo {
         [string]$Grupo
     )
 
-    $gruposValidos = @("recursadores", "reprobados", "general")
+    $gruposValidos = @("recursadores", "reprobados")
     return $gruposValidos -contains $Grupo
 }
 
@@ -67,11 +67,18 @@ function Crear-Usuario {
         [string]$GrupoAsignado
     )
 
-    net user "$NombreUsuario" "$ContrasenaUsuario" /add
+    # 🔹 Convertir SecureString a texto plano
+    $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($ContrasenaUsuario)
+    $ContrasenaTexto = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+
+    # 🔹 Crear el usuario con la contraseña correcta
+    net user "$NombreUsuario" "$ContrasenaTexto" /add
+
+    # 🔹 Asignar al usuario al grupo general y al grupo específico
     net localgroup "general" $NombreUsuario /add
-    if ($GrupoAsignado -eq "recursadores") { net localgroup "recursadores" $NombreUsuario /add }
-    if ($GrupoAsignado -eq "reprobados") { net localgroup "reprobados" $NombreUsuario /add }
+    net localgroup "$GrupoAsignado" $NombreUsuario /add
 }
+
 
 # Función para crear enlaces simbólicos
 function Crear-EnlacesSimbolicos {
@@ -142,21 +149,60 @@ function Mover-Usuario {
     # Agrega al usuario al nuevo grupo
     net localgroup "$NuevoGrupo" "$NombreUsuario" /add
 
-    # Elimina el enlace simbólico del grupo anterior en su carpeta personal
+    # 🔹 Elimina el enlace simbólico del grupo anterior en su carpeta personal
     $rutaSimbolicaAntigua = "C:\FTP\LocalUser\$NombreUsuario\$grupoActual"
     
     if (Test-Path $rutaSimbolicaAntigua) {
         cmd /c rmdir "$rutaSimbolicaAntigua"
     }
 
-    # Crea un nuevo enlace simbólico al nuevo grupo
+    # 🔹 Crea un nuevo enlace simbólico al nuevo grupo
     cmd /c mklink /D "C:\FTP\LocalUser\$NombreUsuario\$NuevoGrupo" "C:\FTP\$NuevoGrupo"
 
-    # Reiniciar el servicio FTP para aplicar cambios
-    Restart-WebItem "IIS:\Sites\FTP"
-
+    # Verifica si el servicio FTP está corriendo antes de reiniciarlo
+$ftpService = Get-Service -Name "FTPSVC" -ErrorAction SilentlyContinue
+if ($ftpService -and $ftpService.Status -eq "Running") {
+    Restart-WebItem "IIS:\Sites\FTP" -Verbose
+}
     Write-Host "El usuario '$NombreUsuario' ha sido movido correctamente a '$NuevoGrupo'." -ForegroundColor Green
 }
 
+function Eliminar-Usuario {
+    param (
+        [string]$NombreUsuario
+    )
 
+    #Verificar si el usuario existe antes de eliminarlo
+    $existeUsuario = net user $NombreUsuario 2>$null
+    if (-not $existeUsuario) {
+        Write-Host "Error: El usuario '$NombreUsuario' no existe." -ForegroundColor Red
+        return
+    }
 
+    Write-Host "Eliminando usuario '$NombreUsuario'..." -ForegroundColor Cyan
+
+    #Eliminar al usuario del sistema
+    net user "$NombreUsuario" /delete
+
+    #Eliminar al usuario de todos los grupos
+    foreach ($grupo in @("recursadores", "reprobados", "general")) {
+        if (net localgroup $grupo | Select-String -Pattern $NombreUsuario) {
+            net localgroup "$grupo" "$NombreUsuario" /delete
+        }
+    }
+
+    #Eliminar carpetas y enlaces simbólicos del usuario
+    $carpetaUsuario = "C:\FTP\$NombreUsuario"
+    $carpetaLocalUser = "C:\FTP\LocalUser\$NombreUsuario"
+
+    if (Test-Path $carpetaUsuario) { Remove-Item -Recurse -Force $carpetaUsuario }
+    if (Test-Path $carpetaLocalUser) { Remove-Item -Recurse -Force $carpetaLocalUser }
+
+    #Eliminar permisos de FTP en IIS
+    Remove-WebConfigurationProperty -PSPath IIS:\ -Location "FTP/$NombreUsuario" -Filter "system.ftpServer/security/authorization" -Name "."
+
+    #Reiniciar el servicio FTP para aplicar cambios
+    Restart-WebItem "IIS:\Sites\FTP"
+
+    Write-Host "El usuario '$NombreUsuario' ha sido eliminado correctamente." -ForegroundColor Green
+}
