@@ -41,11 +41,15 @@ habilitarAnonimo(){
         echo "anon_root=/acceso_anonimo" | sudo tee -a /etc/vsftpd.conf
     fi
 
-    # Agregar chroot_local_user=YES si no existe
-    if ! sudo grep -q "^chroot_local_user=YES" /etc/vsftpd.conf; then
-        echo "chroot_local_user=YES" | sudo tee -a /etc/vsftpd.conf
-    fi
-    sudo service vsftpd restart
+    # Configurar acceso de usuarios locales
+    for param in "local_enable=YES" "write_enable=YES" "chroot_local_user=YES" "allow_writeable_chroot=YES"; do
+        if ! sudo grep -q "^$param" /etc/vsftpd.conf; then
+            echo "$param" | sudo tee -a /etc/vsftpd.conf
+        fi
+    done
+    
+    # Reiniciar el servicio para aplicar los cambios
+    sudo systemctl restart vsftpd
 }
 
 validarGrupo(){
