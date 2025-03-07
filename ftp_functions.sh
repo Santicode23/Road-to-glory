@@ -175,7 +175,7 @@ cambiarGrupoUsuario(){
         return 1
     fi
 
-    # Obtener el grupo actual del usuario (excluyendo grupos comunes)
+    # Obtener el grupo principal actual del usuario
     grupoAnterior=$(id -gn "$usuario")
 
     if [[ "$grupoAnterior" != "$usuario" && "$grupoAnterior" != "users" ]]; then
@@ -186,8 +186,12 @@ cambiarGrupoUsuario(){
             sudo umount "/home/$usuario/$grupoAnterior"
         fi
 
-        # Eliminar al usuario del grupo anterior
-        sudo deluser "$usuario" "$grupoAnterior"
+        # Remover al usuario de TODOS los grupos (excepto su propio grupo de usuario)
+        for grupo in $(id -Gn "$usuario"); do
+            if [[ "$grupo" != "$usuario" && "$grupo" != "users" ]]; then
+                sudo deluser "$usuario" "$grupo"
+            fi
+        done
     fi
 
     # Cambiar el grupo principal del usuario al nuevo grupo
@@ -209,6 +213,7 @@ cambiarGrupoUsuario(){
 
     echo "Grupo cambiado exitosamente a '$nuevoGrupo' y permisos actualizados."
 }
+
 
 usuarioExiste(){
     local usuario="$1"
