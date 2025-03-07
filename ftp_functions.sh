@@ -6,6 +6,15 @@ configurarFTP(){
     echo "Servicio FTP instalado correctamente."
     
     inicializarDirectorios
+    configurarVsftpd
+}
+
+configurarVsftpd(){
+    sudo cp /etc/vsftpd.conf /etc/vsftpd.conf.bak
+    sudo sed -i 's/^#chroot_local_user=YES/chroot_local_user=YES/g' /etc/vsftpd.conf
+    sudo sed -i 's/^chroot_local_user=NO/chroot_local_user=YES/g' /etc/vsftpd.conf
+    echo "allow_writeable_chroot=YES" | sudo tee -a /etc/vsftpd.conf
+    echo "local_root=/home/servidorftp/usuarios/\$USER" | sudo tee -a /etc/vsftpd.conf
 }
 
 inicializarDirectorios(){
