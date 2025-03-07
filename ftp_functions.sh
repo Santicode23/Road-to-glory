@@ -113,15 +113,20 @@ agregarUsuario(){
     fi
 
     sudo adduser $nombreUsuario
-    sudo mkdir -p /home/$nombreUsuario/{personal,publico}
-    sudo mkdir /home/servidorftp/usuarios/$nombreUsuario
-    sudo chmod 700 /home/$nombreUsuario/personal /home/servidorftp/usuarios/$nombreUsuario
-    sudo chmod 777 /home/servidorftp/publico
-    sudo chown $nombreUsuario /home/servidorftp/usuarios/$nombreUsuario
-    sudo chown $nombreUsuario /home/$nombreUsuario/personal
+    sudo mkdir -p /home/$nombreUsuario/{personal,publico,grupo}
+    sudo chmod 700 /home/$nombreUsuario/personal
+    sudo chmod 755 /home/$nombreUsuario/publico
+    sudo chmod 770 /home/$nombreUsuario/grupo
+    sudo chown $nombreUsuario:$nombreUsuario /home/$nombreUsuario/{personal,publico,grupo}
+    
+    # Restringir el acceso solo a estas 3 carpetas
+    echo "local_root=/home/$nombreUsuario" | sudo tee -a /etc/vsftpd.user_config/$nombreUsuario
+    echo "anon_world_readable_only=NO" | sudo tee -a /etc/vsftpd.user_config/$nombreUsuario
+    echo "allow_writeable_chroot=YES" | sudo tee -a /etc/vsftpd.user_config/$nombreUsuario
+    
     sudo mount --bind /home/servidorftp/usuarios/$nombreUsuario /home/$nombreUsuario/personal
     sudo mount --bind /home/servidorftp/publico /home/$nombreUsuario/publico
-    echo "Usuario creado exitosamente."
+    echo "Usuario '$nombreUsuario' creado con acceso restringido solo a sus carpetas."
 }
 
 asignarGrupoUsuario(){
