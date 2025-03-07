@@ -3,7 +3,6 @@
 configurarFTP(){
     echo "Instalando servicio FTP..."
     sudo apt-get install vsftpd
-    clear
     echo "Servicio FTP instalado correctamente."
     
     inicializarDirectorios
@@ -47,38 +46,51 @@ habilitarAnonimo(){
 
 validarGrupo(){
     local nombreGrupo="$1"
-    local limite=20
-    if [ -n "$nombreGrupo" ] && [ ${#nombreGrupo} -le $limite ]; then
+    local limite=15
+    if [[ -z "$nombreGrupo" ]]; then
+        echo "El nombre del grupo no puede estar vacío."
         return 1
-    else
-        return 0
     fi
+    if [[ ! "$nombreGrupo" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+        echo "El nombre del grupo solo puede contener letras, números, guiones o guion bajo."
+        return 1
+    fi
+    if [[ ${#nombreGrupo} -gt $limite ]]; then
+        echo "El nombre del grupo no puede exceder los $limite caracteres."
+        return 1
+    fi
+    return 0
 }
 
 validarUsuario(){
     local nombreUsuario="$1"
     local limite=20
-    if [ -n "$nombreUsuario" ] && [ ${#nombreUsuario} -le $limite ]; then
+    if [[ -z "$nombreUsuario" ]]; then
+        echo "El nombre del usuario no puede estar vacío."
         return 1
-    else
-        return 0
     fi
+    if [[ ! "$nombreUsuario" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+        echo "El nombre del usuario solo puede contener letras, números, guiones o guion bajo."
+        return 1
+    fi
+    if [[ ${#nombreUsuario} -gt $limite ]]; then
+        echo "El nombre del usuario no puede exceder los $limite caracteres."
+        return 1
+    fi
+    return 0
 }
 
 agregarGrupo(){
     local nombreGrupo="$1"
-    if validarGrupo "$nombreGrupo"; then
+
+    if ! validarGrupo "$nombreGrupo"; then
         echo "Nombre de grupo inválido"
-        while validarGrupo "$nombreGrupo"; do
-            read -p "Ingrese nuevamente el nombre del grupo: " nombreGrupo
-        done
+        return 1
     fi
 
     if grupoExiste "$nombreGrupo"; then
-        echo "El grupo ya existe"
-        while grupoExiste "$nombreGrupo"; do
-            read -p "Ingrese nuevamente el nombre del grupo: " nombreGrupo
-        done
+        echo "El grupo '$nombreGrupo' ya existe. Elija otro nombre."
+        return 1
     fi
 
     sudo groupadd $nombreGrupo
@@ -89,18 +101,15 @@ agregarGrupo(){
 
 agregarUsuario(){
     local nombreUsuario="$1"
-    if validarUsuario "$nombreUsuario"; then
+
+    if ! validarUsuario "$nombreUsuario"; then
         echo "Nombre de usuario inválido"
-        while validarUsuario "$nombreUsuario"; do
-            read -p "Ingrese nuevamente el nombre del usuario: " nombreUsuario
-        done
+        return 1
     fi
 
     if usuarioExiste "$nombreUsuario"; then
-        echo "El usuario ya existe"
-        while usuarioExiste "$nombreUsuario"; do
-            read -p "Ingrese nuevamente el nombre del usuario: " nombreUsuario
-        done
+        echo "El usuario '$nombreUsuario' ya existe. Elija otro nombre."
+        return 1
     fi
 
     sudo adduser $nombreUsuario
@@ -118,6 +127,26 @@ agregarUsuario(){
 asignarGrupoUsuario(){
     local usuario="$1"
     local grupo="$2"
+
+    if ! usuarioExiste "$usuario"; then
+        echo "El usuario '$usuario' no existe."
+        return 1
+    fi
+    if ! grupoExiste "$grupo"; then
+        echo "El grupo '$grupo' no existe."
+        return 1
+    fi
+    
+    # Obtener todos los grupos del usuario 
+    gruposUsuario=$(id -Gn "$usuario" | tr ' ' '\n' | grep -Ev "^(users|general|$usuario)$")
+
+    # Si el usuario ya tiene un grupo de trabajo, bloquear la asignación a otro
+    if [[ -n "$gruposUsuario" ]]; then
+        echo "El usuario '$usuario' ya pertenece al grupo '$gruposUsuario'."
+        echo "Si desea cambiar de grupo, use la opción correspondiente."
+        return 1
+    fi
+
     sudo adduser $usuario $grupo
     sudo chmod 774 /home/servidorftp/grupos/$grupo
     sudo mkdir /home/$usuario/$grupo
@@ -128,24 +157,59 @@ asignarGrupoUsuario(){
 cambiarGrupoUsuario(){
     read -p "Ingrese el usuario a cambiar de grupo: " usuario
     read -p "Ingrese el nuevo grupo: " nuevoGrupo
-    grupoAnterior=$(groups "$usuario" | awk '{print $5}')
-    sudo umount /home/$usuario/$grupoAnterior || { echo "Error al desmontar directorio."; exit 1; }
-    sudo deluser $usuario $grupoAnterior
-    sudo adduser $usuario $nuevoGrupo
-    sudo mv /home/$usuario/$grupoAnterior /home/$usuario/$nuevoGrupo
-    sudo mount --bind /home/servidorftp/grupos/$nuevoGrupo /home/$usuario/$nuevoGrupo
-    sudo chgrp $nuevoGrupo /home/$usuario/$nuevoGrupo
-    echo "Grupo cambiado exitosamente."
+
+    if ! usuarioExiste "$usuario"; then
+        echo "El usuario '$usuario' no existe."
+        return 1
+    fi
+    if ! grupoExiste "$nuevoGrupo"; then
+        echo "El grupo '$nuevoGrupo' no existe."
+        return 1
+    fi
+
+    # Obtener el grupo actual del usuario
+    grupoAnterior=$(id -Gn "$usuario" | tr ' ' '\n' | grep -Ev "^(users|general|$usuario)$")
+
+    if [[ -n "$grupoAnterior" ]]; then
+        echo "El usuario pertenece actualmente a '$grupoAnterior'. Eliminándolo..."
+
+        # Desmontar la carpeta del grupo anterior si está montada
+        if mountpoint -q "/home/$usuario/$grupoAnterior"; then
+            sudo umount "/home/$usuario/$grupoAnterior"
+        fi
+
+        # Eliminar al usuario del grupo anterior
+        sudo deluser "$usuario" "$grupoAnterior"
+
+        # Eliminar la carpeta del grupo anterior si aún existe
+        if [[ -d "/home/$usuario/$grupoAnterior" ]]; then
+            sudo rm -rf "/home/$usuario/$grupoAnterior"
+        fi
+    fi
+
+    # Asignar el usuario al nuevo grupo
+    sudo adduser "$usuario" "$nuevoGrupo"
+    sudo mkdir -p "/home/$usuario/$nuevoGrupo"
+    sudo mount --bind "/home/servidorftp/grupos/$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
+    sudo chgrp "$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
+
+    echo "Grupo cambiado exitosamente a '$nuevoGrupo'."
 }
 
 usuarioExiste(){
     local usuario="$1"
-    id "$usuario" &> /dev/null
-    return $?
+    if id "$usuario" &>/dev/null; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 grupoExiste(){
     local grupo="$1"
-    getent group "$grupo" > /dev/null 2>&1
-    return $?
+    if getent group "$grupo" > /dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
 }
