@@ -2,21 +2,11 @@
 
 configurarFTP(){
     echo "Instalando servicio FTP..."
-    sudo apt-get install vsftpd -y
+    sudo apt-get install vsftpd
     echo "Servicio FTP instalado correctamente."
-    
+
     configurarVsftpd
     inicializarDirectorios
-}
-
-inicializarDirectorios(){
-   sudo mkdir -p /home/servidorftp/{grupos,usuarios,publico}
-    
-    sudo chown root:root /home/servidorftp
-    sudo chmod 751 /home/servidorftp
-    sudo chmod 770 /home/servidorftp/{grupos,usuarios}
-    sudo chmod 755 /home/servidorftp/publico
-    echo "Directorios FTP inicializados con permisos adecuados."
 }
 
 configurarVsftpd(){
@@ -37,6 +27,20 @@ pasv_max_port=50000
 EOF'
     sudo systemctl restart vsftpd
     echo "vsftpd configurado correctamente."
+}
+
+inicializarDirectorios(){
+    if [ -d "/home/servidorftp" ]; then
+        echo "El directorio FTP ya existe."
+    else
+        sudo mkdir /home/servidorftp
+    fi
+
+    for carpeta in "grupos" "usuarios" "publico"; do
+        if [ ! -d "/home/servidorftp/$carpeta" ]; then
+            sudo mkdir /home/servidorftp/$carpeta
+        fi
+    done
 }
 
 habilitarAnonimo(){
@@ -110,11 +114,10 @@ agregarGrupo(){
         return 1
     fi
 
-    sudo groupadd "$nombreGrupo"
-    sudo mkdir -p "/home/servidorftp/grupos/$nombreGrupo"
-    sudo chgrp "$nombreGrupo" "/home/servidorftp/grupos/$nombreGrupo"
-    sudo chmod 770 "/home/servidorftp/grupos/$nombreGrupo"
-    echo "Grupo '$nombreGrupo' creado correctamente."
+    sudo groupadd $nombreGrupo
+    sudo mkdir /home/servidorftp/grupos/$nombreGrupo
+    sudo chgrp $nombreGrupo /home/servidorftp/grupos/$nombreGrupo
+    echo "Grupo creado correctamente."
 }
 
 agregarUsuario(){
@@ -130,22 +133,16 @@ agregarUsuario(){
         return 1
     fi
 
-    udo adduser "$nombreUsuario"
-    sudo mkdir -p "/home/$nombreUsuario/$nombreUsuario"
-    sudo mkdir -p "/home/$nombreUsuario/publico"
-    sudo mkdir -p "/home/servidorftp/usuarios/$nombreUsuario"
-    
-    sudo chmod 700 "/home/$nombreUsuario/$nombreUsuario"
-    sudo chmod 700 "/home/servidorftp/usuarios/$nombreUsuario"
-    sudo chmod 755 "/home/$nombreUsuario/publico"
-    
-    sudo chown "$nombreUsuario":"$nombreUsuario" "/home/$nombreUsuario/$nombreUsuario"
-    sudo chown "$nombreUsuario":"$nombreUsuario" "/home/servidorftp/usuarios/$nombreUsuario"
-    sudo usermod -d "/home/$nombreUsuario" "$nombreUsuario"
-    
-    sudo mount --bind /home/servidorftp/usuarios/$nombreUsuario /home/$nombreUsuario/$nombreUsuario
+    sudo adduser $nombreUsuario
+    sudo mkdir -p /home/$nombreUsuario/{personal,publico}
+    sudo mkdir /home/servidorftp/usuarios/$nombreUsuario
+    sudo chmod 700 /home/$nombreUsuario/personal /home/servidorftp/usuarios/$nombreUsuario
+    sudo chmod 777 /home/servidorftp/publico
+    sudo chown $nombreUsuario /home/servidorftp/usuarios/$nombreUsuario
+    sudo chown $nombreUsuario /home/$nombreUsuario/personal
+    sudo mount --bind /home/servidorftp/usuarios/$nombreUsuario /home/$nombreUsuario/personal
     sudo mount --bind /home/servidorftp/publico /home/$nombreUsuario/publico
-    echo "Usuario '$nombreUsuario' creado con acceso a su carpeta personal, pública y grupo."
+    echo "Usuario creado exitosamente."
 }
 
 asignarGrupoUsuario(){
@@ -161,17 +158,21 @@ asignarGrupoUsuario(){
         return 1
     fi
     
-    gruposUsuario=$(id -Gn "$usuario" | tr ' ' '\n' | grep -Ev "^(users|$usuario)$")
-    for g in $gruposUsuario; do
-        sudo deluser "$usuario" "$g"
-    done
-    
-    sudo adduser "$usuario" "$grupo"
-    sudo mkdir -p "/home/$usuario/$grupo"
-    sudo mount --bind "/home/servidorftp/grupos/$grupo" "/home/$usuario/$grupo"
-    sudo chgrp "$grupo" "/home/$usuario/$grupo"
-    sudo chmod 770 "/home/$usuario/$grupo"
-    echo "Usuario '$usuario' asignado al grupo '$grupo' con acceso a su carpeta personal, pública y grupo."
+    # Obtener todos los grupos del usuario 
+    gruposUsuario=$(id -Gn "$usuario" | tr ' ' '\n' | grep -Ev "^(users|general|$usuario)$")
+
+    # Si el usuario ya tiene un grupo de trabajo, bloquear la asignación a otro
+    if [[ -n "$gruposUsuario" ]]; then
+        echo "El usuario '$usuario' ya pertenece al grupo '$gruposUsuario'."
+        echo "Si desea cambiar de grupo, use la opción correspondiente."
+        return 1
+    fi
+
+    sudo adduser $usuario $grupo
+    sudo chmod 774 /home/servidorftp/grupos/$grupo
+    sudo mkdir /home/$usuario/$grupo
+    sudo mount --bind /home/servidorftp/grupos/$grupo /home/$usuario/$grupo
+    echo "Grupo asignado correctamente."
 }
 
 cambiarGrupoUsuario(){
