@@ -201,7 +201,16 @@ cambiarGrupoUsuario(){
     sudo mount --bind "/home/servidorftp/grupos/$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
     sudo chgrp "$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
 
-    echo "Grupo cambiado exitosamente a '$nuevoGrupo'."
+    # Cambiar permisos de las carpetas personales del usuario
+    echo "Actualizando permisos de los archivos del usuario..."
+    sudo chown -R "$usuario:$nuevoGrupo" "/home/$usuario"  # Aplica nuevos permisos
+    sudo chmod -R 770 "/home/$usuario"                      # Ajusta permisos de acceso
+    
+    # Reiniciar servicio FTP para aplicar cambios
+    echo "Reiniciando servicio FTP..."
+    sudo systemctl restart vsftpd
+
+    echo "Grupo cambiado exitosamente a '$nuevoGrupo' y permisos actualizados."
 }
 
 usuarioExiste(){
