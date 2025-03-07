@@ -21,11 +21,9 @@ while $opcion; do
             while true; do
                 read -p "Ingrese el nombre del grupo: " nuevoGrupo
                 if ! validarGrupo "$nuevoGrupo"; then
-                    continue
                 fi
                 if grupoExiste "$nuevoGrupo"; then
                     echo "El grupo '$nuevoGrupo' ya existe. Elija otro nombre."
-                    continue
                 fi
                 break
             done
@@ -35,11 +33,9 @@ while $opcion; do
             while true; do
                 read -p "Ingrese el nombre de usuario: " nuevoUsuario
                 if ! validarUsuario "$nuevoUsuario"; then
-                    continue
                 fi
                 if usuarioExiste "$nuevoUsuario"; then
                     echo "El usuario '$nuevoUsuario' ya existe. Elija otro nombre."
-                    continue
                 fi
                 break
             done
@@ -50,12 +46,10 @@ while $opcion; do
                 read -p "Ingrese el nombre de usuario: " usuario
                 if ! usuarioExiste "$usuario"; then
                     echo "El usuario '$usuario' no existe. Inténtelo de nuevo."
-                    continue
                 fi
                 read -p "Ingrese el nombre del grupo: " grupo
                 if ! grupoExiste "$grupo"; then
                     echo "El grupo '$grupo' no existe. Inténtelo de nuevo."
-                    continue
                 fi
                 break
             done
@@ -66,12 +60,10 @@ while $opcion; do
                 read -p "Ingrese el usuario a cambiar de grupo: " usuario
                 if ! usuarioExiste "$usuario"; then
                     echo "El usuario '$usuario' no existe. Inténtelo de nuevo."
-                    continue
                 fi
                 read -p "Ingrese el nuevo grupo: " nuevoGrupo
                 if ! grupoExiste "$nuevoGrupo"; then
                     echo "El grupo '$nuevoGrupo' no existe. Inténtelo de nuevo."
-                    continue
                 fi
                 break
             done
