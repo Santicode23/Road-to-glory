@@ -2,7 +2,7 @@
 
 configurarFTP(){
     echo "Instalando servicio FTP..."
-    sudo apt-get install vsftpd -y
+    sudo apt-get install vsftpd
     echo "Servicio FTP instalado correctamente."
     
     inicializarDirectorios
@@ -40,13 +40,6 @@ habilitarAnonimo(){
         echo "write_enable=YES" | sudo tee -a /etc/vsftpd.conf
         echo "anon_root=/acceso_anonimo" | sudo tee -a /etc/vsftpd.conf
     fi
-    
-    # Implementar configuración específica para usuario anónimo
-    for param in "anon_upload_enable=NO" "anon_mkdir_write_enable=NO" "anon_other_write_enable=NO" "anon_world_readable_only=YES"; do
-        if ! sudo grep -q "^$param" /etc/vsftpd.conf; then
-            echo "$param" | sudo tee -a /etc/vsftpd.conf
-        fi
-    done
 
     # Configurar acceso de usuarios locales
     for param in "local_enable=YES" "write_enable=YES" "chroot_local_user=YES" "allow_writeable_chroot=YES"; do
@@ -152,7 +145,7 @@ asignarGrupoUsuario(){
         return 1
     fi
     
-    # Obtener todos los grupos del usuario, excluyendo users, general y su propio nombre
+    # Obtener todos los grupos del usuario 
     gruposUsuario=$(id -Gn "$usuario" | tr ' ' '\n' | grep -Ev "^(users|general|$usuario)$")
 
     # Si el usuario ya tiene un grupo de trabajo, bloquear la asignación a otro
@@ -162,18 +155,11 @@ asignarGrupoUsuario(){
         return 1
     fi
 
-    # Asignar usuario al grupo
-    sudo adduser "$usuario" "$grupo"
-
-    # Configurar permisos de la carpeta del grupo
-    sudo chmod 770 "/home/servidorftp/grupos/$grupo"
-
-    # Crear y montar la carpeta del grupo en el home del usuario
-    sudo mkdir -p "/home/$usuario/$grupo"
-    sudo mount --bind "/home/servidorftp/grupos/$grupo" "/home/$usuario/$grupo"
-    sudo chown "$usuario:$grupo" "/home/$usuario/$grupo"
-
-    echo "Grupo asignado correctamente a '$usuario'."
+    sudo adduser $usuario $grupo
+    sudo chmod 774 /home/servidorftp/grupos/$grupo
+    sudo mkdir /home/$usuario/$grupo
+    sudo mount --bind /home/servidorftp/grupos/$grupo /home/$usuario/$grupo
+    echo "Grupo asignado correctamente."
 }
 
 cambiarGrupoUsuario(){
@@ -211,14 +197,9 @@ cambiarGrupoUsuario(){
 
     # Asignar el usuario al nuevo grupo
     sudo adduser "$usuario" "$nuevoGrupo"
-
-    # Configurar permisos de la carpeta del nuevo grupo
-    sudo chmod 770 "/home/servidorftp/grupos/$nuevoGrupo"
-
-    # Crear y montar la carpeta del nuevo grupo en el home del usuario
     sudo mkdir -p "/home/$usuario/$nuevoGrupo"
     sudo mount --bind "/home/servidorftp/grupos/$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
-    sudo chown "$usuario:$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
+    sudo chgrp "$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
 
     echo "Grupo cambiado exitosamente a '$nuevoGrupo'."
 }
@@ -240,3 +221,4 @@ grupoExiste(){
         return 1
     fi
 }
+
