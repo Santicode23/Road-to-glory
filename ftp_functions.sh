@@ -175,35 +175,33 @@ cambiarGrupoUsuario(){
         return 1
     fi
 
-    # Obtener todos los grupos del usuario
-    gruposAnteriores=$(id -Gn "$usuario" | tr ' ' '\n')
+    # Obtener el grupo actual del usuario
+    grupoAnterior=$(id -Gn "$usuario" | tr ' ' '\n' | grep -Ev "^(users|general|$usuario)$")
 
-    # Eliminar al usuario de todos los grupos excepto el suyo propio
-    for grupo in $gruposAnteriores; do
-        if [[ "$grupo" != "$usuario" && "$grupo" != "users" ]]; then
-            echo "Eliminando usuario de grupo: $grupo"
-            sudo deluser "$usuario" "$grupo"
+    if [[ -n "$grupoAnterior" ]]; then
+        echo "El usuario pertenece actualmente a '$grupoAnterior'. Eliminándolo..."
+
+        # Desmontar la carpeta del grupo anterior si está montada
+        if mountpoint -q "/home/$usuario/$grupoAnterior"; then
+            sudo umount "/home/$usuario/$grupoAnterior"
         fi
-    done
 
-    # Cambiar el grupo principal del usuario al nuevo grupo
-    sudo usermod -g "$nuevoGrupo" "$usuario"
+        # Eliminar al usuario del grupo anterior
+        sudo deluser "$usuario" "$grupoAnterior"
 
-    # Asegurar que la carpeta del grupo existe y asignar permisos
+        # Eliminar la carpeta del grupo anterior si aún existe
+        if [[ -d "/home/$usuario/$grupoAnterior" ]]; then
+            sudo rm -rf "/home/$usuario/$grupoAnterior"
+        fi
+    fi
+
+    # Asignar el usuario al nuevo grupo
+    sudo adduser "$usuario" "$nuevoGrupo"
     sudo mkdir -p "/home/$usuario/$nuevoGrupo"
     sudo mount --bind "/home/servidorftp/grupos/$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
     sudo chgrp "$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
 
-    # Actualizar permisos de todos los archivos en la carpeta personal del usuario
-    echo "Actualizando permisos de archivos y carpetas..."
-    sudo chown -R "$usuario:$nuevoGrupo" "/home/$usuario"
-    sudo chmod -R 770 "/home/$usuario"
-
-    # Reiniciar el servicio FTP para reflejar cambios
-    echo "Reiniciando servicio FTP..."
-    sudo systemctl restart vsftpd
-
-    echo "Grupo cambiado exitosamente a '$nuevoGrupo' y permisos actualizados."
+    echo "Grupo cambiado exitosamente a '$nuevoGrupo'."
 }
 
 usuarioExiste(){
