@@ -91,20 +91,22 @@ validarUsuario(){
 agregarGrupo(){
     local nombreGrupo="$1"
 
-    if ! validarGrupo "$nombreGrupo"; then
-        echo "Nombre de grupo inválido"
+    # Solo permitir los grupos 'reprobados' y 'recursadores'
+    if [[ "$nombreGrupo" != "reprobados" && "$nombreGrupo" != "recursadores" ]]; then
+        echo "Solo se permiten los grupos 'reprobados' y 'recursadores'."
         return 1
     fi
 
     if grupoExiste "$nombreGrupo"; then
-        echo "El grupo '$nombreGrupo' ya existe. Elija otro nombre."
+        echo "El grupo '$nombreGrupo' ya existe."
         return 1
     fi
 
-    sudo groupadd $nombreGrupo
-    sudo mkdir /home/servidorftp/grupos/$nombreGrupo
-    sudo chgrp $nombreGrupo /home/servidorftp/grupos/$nombreGrupo
-    echo "Grupo creado correctamente."
+    sudo groupadd "$nombreGrupo"
+    sudo mkdir -p "/home/servidorftp/grupos/$nombreGrupo"
+    sudo chgrp "$nombreGrupo" "/home/servidorftp/grupos/$nombreGrupo"
+    sudo chmod 770 "/home/servidorftp/grupos/$nombreGrupo"
+    echo "Grupo '$nombreGrupo' creado correctamente."
 }
 
 agregarUsuario(){
@@ -136,6 +138,12 @@ asignarGrupoUsuario(){
     local usuario="$1"
     local grupo="$2"
 
+    # Solo permitir los grupos 'reprobados' y 'recursadores'
+    if [[ "$grupo" != "reprobados" && "$grupo" != "recursadores" ]]; then
+        echo "Solo se pueden asignar los grupos 'reprobados' o 'recursadores'."
+        return 1
+    fi
+
     if ! usuarioExiste "$usuario"; then
         echo "El usuario '$usuario' no existe."
         return 1
@@ -145,68 +153,93 @@ asignarGrupoUsuario(){
         return 1
     fi
     
-    # Obtener todos los grupos del usuario 
+    # Obtener todos los grupos del usuario y evitar que tenga más de uno
     gruposUsuario=$(id -Gn "$usuario" | tr ' ' '\n' | grep -Ev "^(users|general|$usuario)$")
-
-    # Si el usuario ya tiene un grupo de trabajo, bloquear la asignación a otro
     if [[ -n "$gruposUsuario" ]]; then
-        echo "El usuario '$usuario' ya pertenece al grupo '$gruposUsuario'."
-        echo "Si desea cambiar de grupo, use la opción correspondiente."
+        echo "El usuario '$usuario' ya pertenece a '$gruposUsuario'. Use la opción para cambiar de grupo."
         return 1
     fi
 
-    sudo adduser $usuario $grupo
-    sudo chmod 774 /home/servidorftp/grupos/$grupo
-    sudo mkdir /home/$usuario/$grupo
-    sudo mount --bind /home/servidorftp/grupos/$grupo /home/$usuario/$grupo
-    echo "Grupo asignado correctamente."
+    sudo usermod -g "$grupo" "$usuario"
+    sudo adduser "$usuario" "$grupo"
+    sudo chmod 770 "/home/servidorftp/grupos/$grupo"
+    sudo mkdir -p "/home/$usuario/$grupo"
+    sudo mount --bind "/home/servidorftp/grupos/$grupo" "/home/$usuario/$grupo"
+    sudo chown "$usuario:$grupo" "/home/$usuario/$grupo"
+    
+    echo "Grupo '$grupo' asignado correctamente a '$usuario'."
 }
+
 
 cambiarGrupoUsuario(){
     read -p "Ingrese el usuario a cambiar de grupo: " usuario
-    read -p "Ingrese el nuevo grupo: " nuevoGrupo
 
     if ! usuarioExiste "$usuario"; then
         echo "El usuario '$usuario' no existe."
         return 1
     fi
+
+    # Detectar el grupo actual del usuario
+    grupo_actual=""
+    usuario_path="/home/$usuario"
+
+    if [[ -d "$usuario_path/reprobados" ]]; then
+        grupo_actual="reprobados"
+    elif [[ -d "$usuario_path/recursadores" ]]; then
+        grupo_actual="recursadores"
+    else
+        echo "El usuario no tiene grupo asignado."
+        return 1
+    fi
+
+    # Pedir el nuevo grupo
+    read -p "Ingrese el nuevo grupo: " nuevoGrupo
     if ! grupoExiste "$nuevoGrupo"; then
         echo "El grupo '$nuevoGrupo' no existe."
         return 1
     fi
 
-    # Obtener el grupo actual del usuario
-    grupoAnterior=$(id -Gn "$usuario" | tr ' ' '\n' | grep -Ev "^(users|general|$usuario)$")
-
-    if [[ -n "$grupoAnterior" ]]; then
-        echo "El usuario pertenece actualmente a '$grupoAnterior'. Eliminándolo..."
-
-        # Desmontar la carpeta del grupo anterior si está montada
-        if mountpoint -q "/home/$usuario/$grupoAnterior"; then
-            sudo umount "/home/$usuario/$grupoAnterior"
-        fi
-
-        # Eliminar al usuario del grupo anterior
-        sudo deluser "$usuario" "$grupoAnterior"
-
-        # Eliminar la carpeta del grupo anterior si aún existe
-        if [[ -d "/home/$usuario/$grupoAnterior" ]]; then
-            sudo rm -rf "/home/$usuario/$grupoAnterior"
-        fi
+    if [[ "$grupo_actual" == "$nuevoGrupo" ]]; then
+        echo "El usuario ya pertenece a '$nuevoGrupo'."
+        return 1
     fi
 
-    # Asignar el usuario al nuevo grupo
-    sudo adduser "$usuario" "$nuevoGrupo"
-    sudo mkdir -p "/home/$usuario/$nuevoGrupo"
-    sudo mount --bind "/home/servidorftp/grupos/$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
-    sudo chgrp "$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
+    # Desmontar la carpeta del grupo anterior si está montada
+    if mountpoint -q "$usuario_path/$grupo_actual"; then
+        echo "Desmontando carpeta de grupo anterior: $grupo_actual"
+        sudo fuser -k "$usuario_path/$grupo_actual" || true
+        sudo umount -l "$usuario_path/$grupo_actual"
+    fi
 
-    echo "Grupo cambiado exitosamente a '$nuevoGrupo'."
+    # Remover al usuario del grupo anterior
+    sudo deluser "$usuario" "$grupo_actual"
+
+    # Asignar al usuario el nuevo grupo
+    sudo usermod -g "$nuevoGrupo" "$usuario"
+    sudo adduser "$usuario" "$nuevoGrupo"
+
+    # Asegurar que la carpeta del nuevo grupo existe y asignar permisos
+    sudo mkdir -p "$usuario_path/$nuevoGrupo"
+    sudo chown "$usuario:$nuevoGrupo" "$usuario_path/$nuevoGrupo"
+    sudo chmod 770 "$usuario_path/$nuevoGrupo"
+
+    # Montar la carpeta del nuevo grupo
+    echo "Montando carpeta del nuevo grupo: $nuevoGrupo"
+    sudo mount --bind "/home/servidorftp/grupos/$nuevoGrupo" "$usuario_path/$nuevoGrupo"
+
+    # Actualizar permisos de archivos
+    sudo chown -R "$usuario:$nuevoGrupo" "$usuario_path"
+    sudo chmod -R 770 "$usuario_path"
+
+    # Reiniciar servicio FTP para aplicar cambios
+    sudo systemctl restart vsftpd
+
+    echo "El usuario '$usuario' ahora pertenece a '$nuevoGrupo'."
 }
 
 usuarioExiste(){
     local usuario="$1"
-    echo "📢 [DEBUG] Verificando usuario: $usuario"
+    echo "[DEBUG] Verificando usuario: $usuario"
     
     if id "$usuario" &>/dev/null; then
         echo "Usuario '$usuario' existe."
@@ -221,7 +254,7 @@ usuarioExiste(){
 
 grupoExiste(){
     local grupo="$1"
-    echo "📢 [DEBUG] Verificando grupo: $grupo"
+    echo "[DEBUG] Verificando grupo: $grupo"
 
     if getent group "$grupo" > /dev/null 2>&1; then
         echo "Grupo '$grupo' existe."
