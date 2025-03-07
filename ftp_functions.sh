@@ -2,7 +2,7 @@
 
 configurarFTP(){
     echo "Instalando servicio FTP..."
-    sudo apt-get install vsftpd
+    sudo apt-get install vsftpd -y
     echo "Servicio FTP instalado correctamente."
     
     inicializarDirectorios
