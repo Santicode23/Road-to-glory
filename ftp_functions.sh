@@ -89,7 +89,7 @@ validarUsuario(){
 }
 
 agregarGrupo(){
-    local nombreGrupo="$(echo "$1" | tr '[:upper:]' '[:lower:]')"
+    local nombreGrupo="$1"
 
     # Solo permitir los grupos 'reprobados' y 'recursadores'
     if [[ "$nombreGrupo" != "reprobados" && "$nombreGrupo" != "recursadores" ]]; then
@@ -110,7 +110,7 @@ agregarGrupo(){
 }
 
 agregarUsuario(){
-    local nombreUsuario="$(echo "$1" | tr '[:upper:]' '[:lower:]')"
+    local nombreUsuario="$1"
     local password
 
     if ! validarUsuario "$nombreUsuario"; then
@@ -162,8 +162,8 @@ agregarUsuario(){
 }
 
 asignarGrupoUsuario(){
-    local usuario="$(echo "$1" | tr '[:upper:]' '[:lower:]')"
-    local grupo="$(echo "$2" | tr '[:upper:]' '[:lower:]')"
+    local usuario="$1"
+    local grupo="$2"
 
     # Solo permitir los grupos 'reprobados' y 'recursadores'
     if [[ "$grupo" != "reprobados" && "$grupo" != "recursadores" ]]; then
@@ -199,8 +199,7 @@ asignarGrupoUsuario(){
 
 
 cambiarGrupoUsuario(){
-    read -p "Ingrese el usuario a cambiar de grupo: "
-    usuario="$(echo "$usuario" | tr '[:upper:]' '[:lower:]')"
+    read -p "Ingrese el usuario a cambiar de grupo: " usuario
 
     if ! usuarioExiste "$usuario"; then
         echo "El usuario '$usuario' no existe."
@@ -217,8 +216,7 @@ cambiarGrupoUsuario(){
     fi
 
     # Pedir el nuevo grupo
-    read -p "Ingrese el nuevo grupo: "
-    nuevoGrupo="$(echo "$nuevoGrupo" | tr '[:upper:]' '[:lower:]')"
+    read -p "Ingrese el nuevo grupo: " nuevoGrupo
     if [[ "$nuevoGrupo" != "reprobados" && "$nuevoGrupo" != "recursadores" ]]; then
         echo "Solo se pueden asignar los grupos 'reprobados' o 'recursadores'."
         return 1
