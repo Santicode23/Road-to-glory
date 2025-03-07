@@ -175,30 +175,34 @@ cambiarGrupoUsuario(){
         return 1
     fi
 
+    # Obtener el grupo actual del usuario
     grupoAnterior=$(id -Gn "$usuario" | tr ' ' '\n' | grep -Ev "^(users|general|$usuario)$")
 
     if [[ -n "$grupoAnterior" ]]; then
         echo "El usuario pertenece actualmente a '$grupoAnterior'. Eliminándolo..."
+
+        # Desmontar la carpeta del grupo anterior si está montada
+        if mountpoint -q "/home/$usuario/$grupoAnterior"; then
+            sudo umount "/home/$usuario/$grupoAnterior"
+        fi
+
+        # Eliminar al usuario del grupo anterior
         sudo deluser "$usuario" "$grupoAnterior"
-        sudo umount "/home/$usuario/$grupoAnterior" 2>/dev/null
-        sudo rm -rf "/home/$usuario/$grupoAnterior"
+
+        # Eliminar la carpeta del grupo anterior si aún existe
+        if [[ -d "/home/$usuario/$grupoAnterior" ]]; then
+            sudo rm -rf "/home/$usuario/$grupoAnterior"
+        fi
     fi
 
+    # Asignar el usuario al nuevo grupo
     sudo adduser "$usuario" "$nuevoGrupo"
     sudo mkdir -p "/home/$usuario/$nuevoGrupo"
     sudo mount --bind "/home/servidorftp/grupos/$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
     sudo chgrp "$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
-    sudo chmod 770 "/home/$usuario/$nuevoGrupo"
-    
-    # Forzar cierre de sesión del usuario para aplicar permisos correctamente
-    sudo pkill -KILL -u "$usuario"
-    
-    # Registrar cambio en log
-    echo "$(date) - Usuario '$usuario' cambiado al grupo '$nuevoGrupo'" | sudo tee -a /var/log/ftp_grupos.log
-    
+
     echo "Grupo cambiado exitosamente a '$nuevoGrupo'."
 }
-
 
 usuarioExiste(){
     local usuario="$1"
@@ -217,4 +221,3 @@ grupoExiste(){
         return 1
     fi
 }
-
