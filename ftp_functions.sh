@@ -111,6 +111,7 @@ agregarGrupo(){
 
 agregarUsuario(){
     local nombreUsuario="$1"
+    local password
 
     if ! validarUsuario "$nombreUsuario"; then
         echo "Nombre de usuario inválido"
@@ -122,7 +123,33 @@ agregarUsuario(){
         return 1
     fi
 
-    sudo adduser $nombreUsuario
+    # Solicitar una contraseña segura
+    while true; do
+        read -s -p "Ingrese una contraseña segura para el usuario: " password
+        echo ""
+        if [[ ${#password} -lt 8 ]]; then
+            echo "La contraseña debe tener al menos 8 caracteres."
+            continue
+        fi
+        if [[ ! "$password" =~ [A-Z] ]]; then
+            echo "La contraseña debe contener al menos una letra mayúscula."
+            continue
+        fi
+        if [[ ! "$password" =~ [0-9] ]]; then
+            echo "La contraseña debe contener al menos un número."
+            continue
+        fi
+        if [[ ! "$password" =~ [^a-zA-Z0-9] ]]; then
+            echo "La contraseña debe contener al menos un carácter especial (!@#$%^&*)."
+            continue
+        fi
+        break
+    done
+
+    # Crear usuario con la contraseña segura
+    sudo adduser --disabled-password --gecos "" "$nombreUsuario"
+    echo "$nombreUsuario:$password" | sudo chpasswd
+
     sudo mkdir -p /home/$nombreUsuario/{personal,publico}
     sudo mkdir /home/servidorftp/usuarios/$nombreUsuario
     sudo chmod 700 /home/$nombreUsuario/personal /home/servidorftp/usuarios/$nombreUsuario
@@ -131,7 +158,7 @@ agregarUsuario(){
     sudo chown $nombreUsuario /home/$nombreUsuario/personal
     sudo mount --bind /home/servidorftp/usuarios/$nombreUsuario /home/$nombreUsuario/personal
     sudo mount --bind /home/servidorftp/publico /home/$nombreUsuario/publico
-    echo "Usuario creado exitosamente."
+    echo "Usuario '$nombreUsuario' creado exitosamente con una contraseña segura."
 }
 
 asignarGrupoUsuario(){
