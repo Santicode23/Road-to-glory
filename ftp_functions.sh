@@ -145,7 +145,7 @@ asignarGrupoUsuario(){
         return 1
     fi
     
-    # Obtener todos los grupos del usuario 
+    # Obtener todos los grupos del usuario, excluyendo users, general y su propio nombre
     gruposUsuario=$(id -Gn "$usuario" | tr ' ' '\n' | grep -Ev "^(users|general|$usuario)$")
 
     # Si el usuario ya tiene un grupo de trabajo, bloquear la asignación a otro
@@ -155,11 +155,18 @@ asignarGrupoUsuario(){
         return 1
     fi
 
-    sudo adduser $usuario $grupo
-    sudo chmod 774 /home/servidorftp/grupos/$grupo
-    sudo mkdir /home/$usuario/$grupo
-    sudo mount --bind /home/servidorftp/grupos/$grupo /home/$usuario/$grupo
-    echo "Grupo asignado correctamente."
+    # Asignar usuario al grupo
+    sudo adduser "$usuario" "$grupo"
+
+    # Configurar permisos de la carpeta del grupo
+    sudo chmod 770 "/home/servidorftp/grupos/$grupo"
+
+    # Crear y montar la carpeta del grupo en el home del usuario
+    sudo mkdir -p "/home/$usuario/$grupo"
+    sudo mount --bind "/home/servidorftp/grupos/$grupo" "/home/$usuario/$grupo"
+    sudo chown "$usuario:$grupo" "/home/$usuario/$grupo"
+
+    echo "Grupo asignado correctamente a '$usuario'."
 }
 
 cambiarGrupoUsuario(){
@@ -197,9 +204,14 @@ cambiarGrupoUsuario(){
 
     # Asignar el usuario al nuevo grupo
     sudo adduser "$usuario" "$nuevoGrupo"
+
+    # Configurar permisos de la carpeta del nuevo grupo
+    sudo chmod 770 "/home/servidorftp/grupos/$nuevoGrupo"
+
+    # Crear y montar la carpeta del nuevo grupo en el home del usuario
     sudo mkdir -p "/home/$usuario/$nuevoGrupo"
     sudo mount --bind "/home/servidorftp/grupos/$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
-    sudo chgrp "$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
+    sudo chown "$usuario:$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
 
     echo "Grupo cambiado exitosamente a '$nuevoGrupo'."
 }
