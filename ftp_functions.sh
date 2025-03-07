@@ -6,6 +6,7 @@ configurarFTP(){
     echo "Servicio FTP instalado correctamente."
     
     inicializarDirectorios
+    configurarChroot
 }
 
 inicializarDirectorios(){
@@ -20,6 +21,14 @@ inicializarDirectorios(){
             sudo mkdir /home/servidorftp/$carpeta
         fi
     done
+}
+
+configurarChroot(){
+    echo "Configurando chroot en vsftpd..."
+    sudo sed -i 's/^chroot_local_user=.*/chroot_local_user=YES/' /etc/vsftpd.conf
+    echo "allow_writeable_chroot=YES" | sudo tee -a /etc/vsftpd.conf
+    sudo systemctl restart vsftpd
+    echo "Chroot configurado correctamente."
 }
 
 habilitarAnonimo(){
