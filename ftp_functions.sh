@@ -121,6 +121,9 @@ agregarUsuario(){
     sudo chown $nombreUsuario /home/$nombreUsuario/personal
     sudo mount --bind /home/servidorftp/usuarios/$nombreUsuario /home/$nombreUsuario/personal
     sudo mount --bind /home/servidorftp/publico /home/$nombreUsuario/publico
+
+    sudo chmod 700 /home/$nombreUsuario
+    sudo chmod 500 /home/servidorftp
     echo "Usuario creado exitosamente."
 }
 
