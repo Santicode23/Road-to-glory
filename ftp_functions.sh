@@ -5,28 +5,7 @@ configurarFTP(){
     sudo apt-get install vsftpd -y
     echo "Servicio FTP instalado correctamente."
 
-    configurarVsftpd
     inicializarDirectorios
-}
-
-configurarVsftpd(){
-    echo "Configurando vsftpd..."
-    sudo cp /etc/vsftpd.conf /etc/vsftpd.conf.backup
-    sudo bash -c 'cat > /etc/vsftpd.conf <<EOF
-listen=YES
-anonymous_enable=NO
-local_enable=YES
-write_enable=YES
-chroot_local_user=YES
-allow_writeable_chroot=YES
-user_sub_token=$USER
-local_root=/home/\$USER
-pasv_enable=YES
-pasv_min_port=40000
-pasv_max_port=50000
-EOF'
-    sudo systemctl restart vsftpd
-    echo "vsftpd configurado correctamente."
 }
 
 inicializarDirectorios(){
