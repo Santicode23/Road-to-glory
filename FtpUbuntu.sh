@@ -13,7 +13,8 @@ while $opcion; do
     echo "2- Crear usuario"
     echo "3- Asignar usuario a grupo"
     echo "4- Cambiar grupo de usuario"
-    echo "5- Salir"
+    echo "5- Listar usuarios"
+    echo "6- Salir"
     read -p "Ingrese una opción: " seleccion
 
     case $seleccion in
@@ -21,6 +22,7 @@ while $opcion; do
             while true; do
                 read -p "Ingrese el nombre del grupo: " nuevoGrupo
                 if ! validarGrupo "$nuevoGrupo"; then
+                    echo "Nombre de grupo inválido. Intente de nuevo."
                     continue
                 fi
                 if grupoExiste "$nuevoGrupo"; then
@@ -35,6 +37,7 @@ while $opcion; do
             while true; do
                 read -p "Ingrese el nombre de usuario: " nuevoUsuario
                 if ! validarUsuario "$nuevoUsuario"; then
+                    echo "Nombre de usuario inválido. Intente de nuevo."
                     continue
                 fi
                 if usuarioExiste "$nuevoUsuario"; then
@@ -66,16 +69,22 @@ while $opcion; do
                 read -p "Ingrese el usuario a cambiar de grupo: " usuario
                 if ! usuarioExiste "$usuario"; then
                     echo "El usuario '$usuario' no existe. Inténtelo de nuevo."
+                    continue
                 fi
                 read -p "Ingrese el nuevo grupo: " nuevoGrupo
                 if ! grupoExiste "$nuevoGrupo"; then
                     echo "El grupo '$nuevoGrupo' no existe. Inténtelo de nuevo."
+                    continue
                 fi
                 break
             done
             cambiarGrupoUsuario "$usuario" "$nuevoGrupo"
             ;;
-        5)  
+        5)
+            echo "Usuarios registrados:"
+            listarUsuarios
+            ;;
+        6)  
             opcion=false
             echo "Saliendo del programa..."
             ;;
