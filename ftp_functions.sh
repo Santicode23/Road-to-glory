@@ -206,18 +206,30 @@ cambiarGrupoUsuario(){
 
 usuarioExiste(){
     local usuario="$1"
+    echo "📢 [DEBUG] Verificando usuario: $usuario"
+    
     if id "$usuario" &>/dev/null; then
+        echo "Usuario '$usuario' existe."
         return 0
     else
+        echo "Usuario '$usuario' NO existe."
+        echo "[DEBUG] Lista de usuarios disponibles:"
+        awk -F: '{print $1}' /etc/passwd  # Muestra los usuarios actuales
         return 1
     fi
 }
 
 grupoExiste(){
     local grupo="$1"
+    echo "📢 [DEBUG] Verificando grupo: $grupo"
+
     if getent group "$grupo" > /dev/null 2>&1; then
+        echo "Grupo '$grupo' existe."
         return 0
     else
+        echo "Grupo '$grupo' NO existe."
+        echo "[DEBUG] Lista de grupos disponibles:"
+        getent group | awk -F: '{print $1}'  # Muestra los grupos actuales
         return 1
     fi
 }
