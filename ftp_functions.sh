@@ -33,15 +33,19 @@ habilitarAnonimo(){
 
     if ! sudo grep -q "^anonymous_enable=YES" /etc/vsftpd.conf; then
         sudo sed -i 's/^anonymous_enable=.*/anonymous_enable=YES/g' /etc/vsftpd.conf
-        sudo service vsftpd restart
     fi
     
     if ! sudo grep -q "^write_enable=.*" /etc/vsftpd.conf; then
         sudo mount --bind /home/servidorftp/publico /acceso_anonimo/publico
         echo "write_enable=YES" | sudo tee -a /etc/vsftpd.conf
         echo "anon_root=/acceso_anonimo" | sudo tee -a /etc/vsftpd.conf
-        sudo service vsftpd restart
     fi
+
+    # Agregar chroot_local_user=YES si no existe
+    if ! sudo grep -q "^chroot_local_user=YES" /etc/vsftpd.conf; then
+        echo "chroot_local_user=YES" | sudo tee -a /etc/vsftpd.conf
+    fi
+    sudo service vsftpd restart
 }
 
 validarGrupo(){
