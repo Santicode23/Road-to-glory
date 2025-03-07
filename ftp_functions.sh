@@ -40,6 +40,13 @@ habilitarAnonimo(){
         echo "write_enable=YES" | sudo tee -a /etc/vsftpd.conf
         echo "anon_root=/acceso_anonimo" | sudo tee -a /etc/vsftpd.conf
     fi
+    
+    # Implementar configuración específica para usuario anónimo
+    for param in "anon_upload_enable=NO" "anon_mkdir_write_enable=NO" "anon_other_write_enable=NO" "anon_world_readable_only=YES"; do
+        if ! sudo grep -q "^$param" /etc/vsftpd.conf; then
+            echo "$param" | sudo tee -a /etc/vsftpd.conf
+        fi
+    done
 
     # Configurar acceso de usuarios locales
     for param in "local_enable=YES" "write_enable=YES" "chroot_local_user=YES" "allow_writeable_chroot=YES"; do
