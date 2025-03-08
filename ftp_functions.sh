@@ -77,7 +77,7 @@ validarUsuario(){
         echo "El nombre del usuario no puede estar vacío."
         return 1
     fi
-    if [[ ! "$nombreUsuario" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    if [[ ! "$nombreUsuario" =~ ^[a-zA-Z][a-zA-Z0-9_-]*$ ]]; then
         echo "El nombre del usuario solo puede contener letras, números, guiones o guion bajo."
         return 1
     fi
