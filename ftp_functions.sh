@@ -81,14 +81,6 @@ validarUsuario(){
         echo "El nombre del usuario solo puede contener letras, números, guiones o guion bajo."
         return 1
     fi
-    if [[ ! "$nombreUsuario" =~ ^- ]]; then
-        echo "El nombre del usuario no puede empezar con guion."
-        return 1
-    fi
-    if [[ ! "$nombreUsuario" =~ ^[0-9] ]]; then
-        echo "El nombre del usuario no puede empezar por un numero"
-        return 1
-    fi
     if [[ ${#nombreUsuario} -gt $limite ]]; then
         echo "El nombre del usuario no puede exceder los $limite caracteres."
         return 1
