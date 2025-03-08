@@ -1,5 +1,5 @@
 # Importar el módulo de utilidades externas
-Import-Module "C:\Users\Administrator\Desktop\librerianueva.ps1"
+Import-Module "C:\Users\Administrator\Desktop\Ftp_function.ps1"
 function Mostrar-Menu {
     Clear-Host
     Write-Host "=================================="
