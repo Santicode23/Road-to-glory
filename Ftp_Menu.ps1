@@ -1,52 +1,66 @@
-# Importa las funciones necesarias
-. .\Ftp_function.ps1
-. .\Ftp_config.ps1
-
-# Función para mostrar el menú principal
-function Mostrar-MenuPrincipal {
-    Write-Host "Menú de administración del FTP:"
-    Write-Host "1. Agregar nuevo usuario"
-    Write-Host "2. Mover usuario a otro grupo"
-    Write-Host "3. Salir"
-    return (Read-Host "Selecciona una opción")
+# Importar el módulo de utilidades externas
+Import-Module "C:\Users\Administrator\Desktop\Ftp_function.ps1"
+function Mostrar-Menu {
+    Clear-Host
+    Write-Host "=================================="
+    Write-Host "     Administrador de FTP"
+    Write-Host "=================================="
+    Write-Host "1. Instalar y Configurar FTP Completo"
+    Write-Host "2. Crear grupos locales"
+    Write-Host "3. Crear usuario FTP"
+    Write-Host "4. Eliminar usuario FTP"
+    Write-Host "5. Configurar autenticación y permisos"
+    Write-Host "6. Reiniciar sitio FTP"
+    Write-Host "7. Salir"
+    Write-Host "=================================="
 }
 
-# Bucle del menú principal
-do {
-    $opcion = Mostrar-MenuPrincipal
+function Menu-Principal {
+    do {
+        Mostrar-Menu
+        $opcion = Read-Host "Seleccione una opción"
 
-    switch ($opcion) {
-        1 {
-            $nombreUsuario = Read-Host "Ingresa el nombre del usuario"
-            # Verifica si el usuario ya existe
-            $existe = net user $nombreUsuario 2>$null
-            if ($existe) {
-                Write-Host "El usuario $nombreUsuario ya existe. Intenta con otro nombre." -ForegroundColor Red
+        switch ($opcion) {
+            1 {
+                Write-Host "Iniciando instalación y configuración completa de FTP..." -ForegroundColor Cyan
+
+                Instalar-Caracteristicas
+                Crear-Estructura-FTP
+                Crear-Sitio-FTP
+                Configurar-TLS
+                Configurar-UserIsolation
+                Configurar-Autenticacion-Permisos
+
+                Write-Host "Configuración completa de FTP finalizada." -ForegroundColor Green
+            }
+            2 { 
+                Crear-Grupos-Locales 
+            }
+            3 { 
+                Crear-Usuario-FTP 
+            }
+            4 { 
+                $nombreUsuario = Read-Host "Ingrese el nombre de usuario a eliminar"
+                Eliminar-Usuario-FTP -nombreUsuario $nombreUsuario
+            }
+            5 { 
+                Configurar-Autenticacion-Permisos 
+            }
+            6 { 
+                Reiniciar-FTP 
+            }
+            7 { 
+                Write-Host "Saliendo del programa..." 
                 break
             }
-            $contrasenaUsuario = Read-Host "Ingresa la contraseña del usuario" -AsSecureString
-            $grupoAsignado = Read-Host "Ingresa el grupo al que pertenece (A: grupo1 / B: grupo2)"
-
-            # Valida la contraseña
-            if (-not (Validar-Contra -Contrasena $contrasenaUsuario)) {
-                Write-Host "Contraseña no válida. Intenta de nuevo." -ForegroundColor Red
-                break
+            default {
+                Write-Host "Opción no válida. Por favor, seleccione una opción entre 1 y 7." -ForegroundColor Red
             }
+        }
+        Pause
+    } while ($opcion -ne 7)
+}
 
-            # Agrega el usuario
-            Agregar-Usuario -NombreUsuario $nombreUsuario -ContrasenaUsuario $contrasenaUsuario -GrupoAsignado $grupoAsignado
-        }
-        2 {
-            $nombreUsuario = Read-Host "Ingresa el nombre del usuario a mover"
-            $nuevoGrupo = Read-Host "Ingresa el nuevo grupo (grupo1 / grupo2)"
-            Mover-Usuario -NombreUsuario $nombreUsuario -NuevoGrupo $nuevoGrupo
-        }
-        3 {
-            Write-Host "Saliendo..." -ForegroundColor Green
-            break
-        }
-        default {
-            Write-Host "Opción no válida, intenta nuevamente." -ForegroundColor Red
-        }
-    }
-} while ($opcion -ne 3)
+# Ejecutar menú al correr el script
+Menu-Principal
+

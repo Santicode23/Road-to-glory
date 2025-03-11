@@ -2,7 +2,7 @@
 
 configurarFTP(){
     echo "Instalando servicio FTP..."
-    sudo apt-get install vsftpd
+    sudo apt-get install vsftpd -y
     echo "Servicio FTP instalado correctamente."
     
     inicializarDirectorios
@@ -33,15 +33,23 @@ habilitarAnonimo(){
 
     if ! sudo grep -q "^anonymous_enable=YES" /etc/vsftpd.conf; then
         sudo sed -i 's/^anonymous_enable=.*/anonymous_enable=YES/g' /etc/vsftpd.conf
-        sudo service vsftpd restart
     fi
     
     if ! sudo grep -q "^write_enable=.*" /etc/vsftpd.conf; then
         sudo mount --bind /home/servidorftp/publico /acceso_anonimo/publico
         echo "write_enable=YES" | sudo tee -a /etc/vsftpd.conf
         echo "anon_root=/acceso_anonimo" | sudo tee -a /etc/vsftpd.conf
-        sudo service vsftpd restart
     fi
+
+    # Configurar acceso de usuarios locales
+    for param in "local_enable=YES" "write_enable=YES" "chroot_local_user=YES" "allow_writeable_chroot=YES"; do
+        if ! sudo grep -q "^$param" /etc/vsftpd.conf; then
+            echo "$param" | sudo tee -a /etc/vsftpd.conf
+        fi
+    done
+    
+    # Reiniciar el servicio para aplicar los cambios
+    sudo systemctl restart vsftpd
 }
 
 validarGrupo(){
@@ -69,7 +77,7 @@ validarUsuario(){
         echo "El nombre del usuario no puede estar vacío."
         return 1
     fi
-    if [[ ! "$nombreUsuario" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    if [[ ! "$nombreUsuario" =~ ^[a-zA-Z][a-zA-Z0-9_-]*$ ]]; then
         echo "El nombre del usuario solo puede contener letras, números, guiones o guion bajo."
         return 1
     fi
@@ -83,24 +91,27 @@ validarUsuario(){
 agregarGrupo(){
     local nombreGrupo="$1"
 
-    if ! validarGrupo "$nombreGrupo"; then
-        echo "Nombre de grupo inválido"
+    # Solo permitir los grupos 'reprobados' y 'recursadores'
+    if [[ "$nombreGrupo" != "reprobados" && "$nombreGrupo" != "recursadores" ]]; then
+        echo "Solo se permiten los grupos 'reprobados' y 'recursadores'."
         return 1
     fi
 
     if grupoExiste "$nombreGrupo"; then
-        echo "El grupo '$nombreGrupo' ya existe. Elija otro nombre."
+        echo "El grupo '$nombreGrupo' ya existe."
         return 1
     fi
 
-    sudo groupadd $nombreGrupo
-    sudo mkdir /home/servidorftp/grupos/$nombreGrupo
-    sudo chgrp $nombreGrupo /home/servidorftp/grupos/$nombreGrupo
-    echo "Grupo creado correctamente."
+    sudo groupadd "$nombreGrupo"
+    sudo mkdir -p "/home/servidorftp/grupos/$nombreGrupo"
+    sudo chgrp "$nombreGrupo" "/home/servidorftp/grupos/$nombreGrupo"
+    sudo chmod 770 "/home/servidorftp/grupos/$nombreGrupo"
+    echo "Grupo '$nombreGrupo' creado correctamente."
 }
 
 agregarUsuario(){
     local nombreUsuario="$1"
+    local password
 
     if ! validarUsuario "$nombreUsuario"; then
         echo "Nombre de usuario inválido"
@@ -112,7 +123,33 @@ agregarUsuario(){
         return 1
     fi
 
-    sudo adduser $nombreUsuario
+    # Solicitar una contraseña segura
+    while true; do
+        read -s -p "Ingrese una contraseña segura para el usuario: " password
+        echo ""
+        if [[ ${#password} -lt 8 ]]; then
+            echo "La contraseña debe tener al menos 8 caracteres."
+            continue
+        fi
+        if [[ ! "$password" =~ [A-Z] ]]; then
+            echo "La contraseña debe contener al menos una letra mayúscula."
+            continue
+        fi
+        if [[ ! "$password" =~ [0-9] ]]; then
+            echo "La contraseña debe contener al menos un número."
+            continue
+        fi
+        if [[ ! "$password" =~ [^a-zA-Z0-9] ]]; then
+            echo "La contraseña debe contener al menos un carácter especial (!@#$%^&*)."
+            continue
+        fi
+        break
+    done
+
+    # Crear usuario con la contraseña segura
+    sudo adduser --disabled-password --gecos "" "$nombreUsuario"
+    echo "$nombreUsuario:$password" | sudo chpasswd
+
     sudo mkdir -p /home/$nombreUsuario/{personal,publico}
     sudo mkdir /home/servidorftp/usuarios/$nombreUsuario
     sudo chmod 700 /home/$nombreUsuario/personal /home/servidorftp/usuarios/$nombreUsuario
@@ -121,12 +158,18 @@ agregarUsuario(){
     sudo chown $nombreUsuario /home/$nombreUsuario/personal
     sudo mount --bind /home/servidorftp/usuarios/$nombreUsuario /home/$nombreUsuario/personal
     sudo mount --bind /home/servidorftp/publico /home/$nombreUsuario/publico
-    echo "Usuario creado exitosamente."
+    echo "Usuario '$nombreUsuario' creado exitosamente con una contraseña segura."
 }
 
 asignarGrupoUsuario(){
     local usuario="$1"
     local grupo="$2"
+
+    # Solo permitir los grupos 'reprobados' y 'recursadores'
+    if [[ "$grupo" != "reprobados" && "$grupo" != "recursadores" ]]; then
+        echo "Solo se pueden asignar los grupos 'reprobados' o 'recursadores'."
+        return 1
+    fi
 
     if ! usuarioExiste "$usuario"; then
         echo "El usuario '$usuario' no existe."
@@ -137,79 +180,116 @@ asignarGrupoUsuario(){
         return 1
     fi
     
-    # Obtener todos los grupos del usuario 
+    # Obtener todos los grupos del usuario y evitar que tenga más de uno
     gruposUsuario=$(id -Gn "$usuario" | tr ' ' '\n' | grep -Ev "^(users|general|$usuario)$")
-
-    # Si el usuario ya tiene un grupo de trabajo, bloquear la asignación a otro
     if [[ -n "$gruposUsuario" ]]; then
-        echo "El usuario '$usuario' ya pertenece al grupo '$gruposUsuario'."
-        echo "Si desea cambiar de grupo, use la opción correspondiente."
+        echo "El usuario '$usuario' ya pertenece a '$gruposUsuario'. Use la opción para cambiar de grupo."
         return 1
     fi
 
-    sudo adduser $usuario $grupo
-    sudo chmod 774 /home/servidorftp/grupos/$grupo
-    sudo mkdir /home/$usuario/$grupo
-    sudo mount --bind /home/servidorftp/grupos/$grupo /home/$usuario/$grupo
-    echo "Grupo asignado correctamente."
+    sudo usermod -g "$grupo" "$usuario"
+    sudo adduser "$usuario" "$grupo"
+    sudo chmod 770 "/home/servidorftp/grupos/$grupo"
+    sudo mkdir -p "/home/$usuario/$grupo"
+    sudo mount --bind "/home/servidorftp/grupos/$grupo" "/home/$usuario/$grupo"
+    sudo chown "$usuario:$grupo" "/home/$usuario/$grupo"
+    
+    echo "Grupo '$grupo' asignado correctamente a '$usuario'."
 }
+
 
 cambiarGrupoUsuario(){
     read -p "Ingrese el usuario a cambiar de grupo: " usuario
-    read -p "Ingrese el nuevo grupo: " nuevoGrupo
 
     if ! usuarioExiste "$usuario"; then
         echo "El usuario '$usuario' no existe."
         return 1
     fi
-    if ! grupoExiste "$nuevoGrupo"; then
-        echo "El grupo '$nuevoGrupo' no existe."
+
+    # Obtener el grupo actual del usuario
+    grupo_actual=$(id -gn "$usuario")
+    usuario_path="/home/$usuario"
+
+    if [[ "$grupo_actual" != "reprobados" && "$grupo_actual" != "recursadores" ]]; then
+        echo "El usuario no tiene un grupo válido asignado."
         return 1
     fi
 
-    # Obtener el grupo actual del usuario
-    grupoAnterior=$(id -Gn "$usuario" | tr ' ' '\n' | grep -Ev "^(users|general|$usuario)$")
-
-    if [[ -n "$grupoAnterior" ]]; then
-        echo "El usuario pertenece actualmente a '$grupoAnterior'. Eliminándolo..."
-
-        # Desmontar la carpeta del grupo anterior si está montada
-        if mountpoint -q "/home/$usuario/$grupoAnterior"; then
-            sudo umount "/home/$usuario/$grupoAnterior"
-        fi
-
-        # Eliminar al usuario del grupo anterior
-        sudo deluser "$usuario" "$grupoAnterior"
-
-        # Eliminar la carpeta del grupo anterior si aún existe
-        if [[ -d "/home/$usuario/$grupoAnterior" ]]; then
-            sudo rm -rf "/home/$usuario/$grupoAnterior"
-        fi
+    # Pedir el nuevo grupo
+    read -p "Ingrese el nuevo grupo: " nuevoGrupo
+    if [[ "$nuevoGrupo" != "reprobados" && "$nuevoGrupo" != "recursadores" ]]; then
+        echo "Solo se pueden asignar los grupos 'reprobados' o 'recursadores'."
+        return 1
     fi
 
-    # Asignar el usuario al nuevo grupo
-    sudo adduser "$usuario" "$nuevoGrupo"
-    sudo mkdir -p "/home/$usuario/$nuevoGrupo"
-    sudo mount --bind "/home/servidorftp/grupos/$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
-    sudo chgrp "$nuevoGrupo" "/home/$usuario/$nuevoGrupo"
+    if [[ "$grupo_actual" == "$nuevoGrupo" ]]; then
+        echo "El usuario ya pertenece a '$nuevoGrupo'."
+        return 1
+    fi
 
-    echo "Grupo cambiado exitosamente a '$nuevoGrupo'."
+    # Desmontar todas las carpetas de grupo antes de cambiar
+    for grupo in reprobados recursadores; do
+        if mountpoint -q "$usuario_path/$grupo"; then
+            echo "Desmontando carpeta: $grupo"
+            sudo fuser -k "$usuario_path/$grupo" || true
+            sudo umount -l "$usuario_path/$grupo"
+            sudo rm -rf "$usuario_path/$grupo"  # Eliminar solo la carpeta del grupo
+        fi
+    done
+
+    # Remover al usuario de todos los grupos de trabajo
+    sudo deluser "$usuario" "reprobados"
+    sudo deluser "$usuario" "recursadores"
+
+    # Asignar al usuario el nuevo grupo
+    sudo usermod -g "$nuevoGrupo" "$usuario"
+    sudo adduser "$usuario" "$nuevoGrupo"
+
+    # Asegurar que solo tenga acceso a su grupo actual
+    sudo mkdir -p "$usuario_path/$nuevoGrupo"
+    sudo chown "$usuario:$nuevoGrupo" "$usuario_path/$nuevoGrupo"
+    sudo chmod 770 "$usuario_path/$nuevoGrupo"
+
+    # Montar la carpeta del nuevo grupo
+    echo "Montando carpeta del nuevo grupo: $nuevoGrupo"
+    sudo mount --bind "/home/servidorftp/grupos/$nuevoGrupo" "$usuario_path/$nuevoGrupo"
+
+    # Verificación final
+    echo "[DEBUG] Grupos actuales del usuario:"
+    id "$usuario"
+
+    # Reiniciar servicio FTP para aplicar cambios
+    sudo systemctl restart vsftpd
+
+    echo "El usuario '$usuario' ahora pertenece a '$nuevoGrupo' y solo puede ver su carpeta correspondiente."
 }
 
 usuarioExiste(){
     local usuario="$1"
+    echo "[DEBUG] Verificando usuario: $usuario"
+    
     if id "$usuario" &>/dev/null; then
+        echo "Usuario '$usuario' existe."
         return 0
     else
+        echo "Usuario '$usuario' NO existe."
+        echo "[DEBUG] Lista de usuarios disponibles:"
+        awk -F: '{print $1}' /etc/passwd  # Muestra los usuarios actuales
         return 1
     fi
 }
 
 grupoExiste(){
     local grupo="$1"
+    echo "[DEBUG] Verificando grupo: $grupo"
+
     if getent group "$grupo" > /dev/null 2>&1; then
+        echo "Grupo '$grupo' existe."
         return 0
     else
+        echo "Grupo '$grupo' NO existe."
+        echo "[DEBUG] Lista de grupos disponibles:"
+        getent group | awk -F: '{print $1}'  # Muestra los grupos actuales
         return 1
     fi
 }

@@ -3,9 +3,14 @@ Install-WindowsFeature -Name Web-Ftp-Server -IncludeManagementTools
 Install-WindowsFeature -Name Web-Server -IncludeManagementTools
 Import-Module WebAdministration
 
-# Solicita los nombres de los grupos
-$grupo1 = Read-Host "Ingresa el nombre del primer grupo"
-$grupo2 = Read-Host "Ingresa el nombre del segundo grupo"
+# Solicita los nombres de los grupos con validación
+do {
+    $grupo1 = Read-Host "Ingresa el nombre del primer grupo (solo letras y números)"
+} while ($grupo1 -match '[^a-zA-Z0-9]')
+
+do {
+    $grupo2 = Read-Host "Ingresa el nombre del segundo grupo (solo letras y números)"
+} while ($grupo2 -match '[^a-zA-Z0-9]')
 
 # Crea la estructura de carpetas para FTP
 mkdir C:\FTP
@@ -79,8 +84,11 @@ Add-WebConfiguration "/system.ftpServer/security/authorization" -Value @{
 Set-ItemProperty "IIS:\Sites\FTP" -Name ftpServer.security.ssl.controlChannelPolicy -Value 0
 Set-ItemProperty "IIS:\Sites\FTP" -Name ftpServer.security.ssl.dataChannelPolicy -Value 0
 
-# Reinicia el servicio FTP para aplicar cambios
-#Restart-WebItem "IIS:\Sites\FTP" -Verbose
+# Verifica si el servicio FTP está corriendo antes de reiniciarlo
+$ftpService = Get-Service -Name "FTPSVC" -ErrorAction SilentlyContinue
+if ($ftpService -and $ftpService.Status -eq "Running") {
+    Restart-WebItem "IIS:\Sites\FTP" -Verbose
+}
 
 # Desactiva el firewall en perfiles privado, dominio y público
 Set-NetFireWallProfile -Profile Private,Domain,Public -Enabled False
