@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Importar módulos
+# Importar modulos
 source validateDhcp.sh
 source configDhcp.sh
 
