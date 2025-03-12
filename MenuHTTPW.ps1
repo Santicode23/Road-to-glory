@@ -8,17 +8,16 @@ function Mostrar-Menu {
     Write-Host "=================================="
     Write-Host "0. Instalar dependencias necesarias"
     Write-Host "1. Seleccionar Servicio"
-    Write-Host "2. Seleccionar Versión"
+    Write-Host "2. Seleccionar Version"
     Write-Host "3. Configurar Puerto"
-    Write-Host "4. Proceder con la Instalación"
+    Write-Host "4. Proceder con la Instalacion"
     Write-Host "5. Verificar servicios instalados"
     Write-Host "6. Salir"
-    Write-Host "=================================="
 }
 
 while ($true) {
     Mostrar-Menu
-    $opcion_menu = Read-Host "Seleccione una opción"
+    $opcion_menu = Read-Host "Seleccione una opcion"
 
     switch ($opcion_menu) {
         "0" {
@@ -39,17 +38,17 @@ while ($true) {
         }
         "4" {
             Write-Host "=================================="
-            Write-Host "      Resumen de la instalación   "
+            Write-Host "      Resumen de la instalacion   "
             Write-Host "=================================="
             Write-Host "Servicio seleccionado: $servicio"
-            Write-Host "Versión seleccionada: $version"
+            Write-Host "Version seleccionada: $version"
             Write-Host "Puerto configurado: $puerto"
             Write-Host "=================================="
-            $confirmacion = Read-Host "¿Desea proceder con la instalación? (s/n)"
+            $confirmacion = Read-Host "¿Desea proceder con la instalacion? (s/n)"
             if ($confirmacion -eq "s") {
                 proceso_instalacion
             } else {
-                Write-Host "Instalación cancelada."
+                Write-Host "Instalacion cancelada."
             }
             Read-Host "Presione Enter para continuar..."
         }
@@ -58,7 +57,7 @@ while ($true) {
             exit
         }
         default {
-            Write-Host "Opción no válida. Intente de nuevo."
+            Write-Host "Opcion no valida. Intente de nuevo."
             Read-Host "Presione Enter para continuar..."
         }
     }
