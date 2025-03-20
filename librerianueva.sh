@@ -364,6 +364,8 @@ ssl_sslv2=NO
 ssl_sslv3=NO
 require_ssl_reuse=NO
 ssl_ciphers=HIGH
+allow_anon_ssl=YES
+listen_port=990
 EOF
 
     echo "Reiniciando vsftpd..."
