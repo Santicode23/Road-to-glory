@@ -286,41 +286,10 @@ instalar_apache() {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PERO QUE DISTINGUIDO PEDRI</title>
-    <style>
-        body {
-            text-align: center;
-            background-color: #004c98;
-            color: white;
-            font-family: Arial, sans-serif;
-        }
-        h1 {
-            margin-top: 20px;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        marquee {
-            margin-top: 50px;
-        }
-        img {
-            width: 300px; /* Ajusta el tamaño de las imágenes */
-            height: auto;
-            border-radius: 10px;
-            box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.5);
-            margin: 0 20px;
-        }
-    </style>
+    <title>HOME PAGE</title>
 </head>
 <body>
-    <h1>PERO QUE DISTINGUIDO PEDRI</h1>
-    <marquee behavior="scroll" direction="left" scrollamount="10">
-        <img src="https://upload.wikimedia.org/wikipedia/en/4/47/FC_Barcelona_%28crest%29.svg" 
-             alt="Escudo del FC Barcelona">
-        <img src="https://pbs.twimg.com/media/E5ZP9L2X0Ak8gN2.jpg:large" 
-             alt="Imagen del FC Barcelona">
-        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbFMCtfPdNYbLQL0fCGC_ntQuypliAFhJmcg&s" 
-             alt="Pedri Distinguido">
-    </marquee>
+    <h1>HOLA PROFE</h1>
 </body>
 </html>
 EOF

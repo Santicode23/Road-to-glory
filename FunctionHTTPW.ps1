@@ -9,7 +9,7 @@ function seleccionar_servicio {
     Write-Host "1.- IIS"
     Write-Host "2.- Apache"
     Write-Host "3.- Tomcat"
-    $opcion = Read-Host "Opción"
+    $opcion = Read-Host "Opcion"
 
     switch ($opcion) {
         "1" {
@@ -28,7 +28,7 @@ function seleccionar_servicio {
             obtener_versiones_tomcat
         }
         default {
-            Write-Host "Opción no válida. Intente de nuevo."
+            Write-Host "Opcion no valida. Intente de nuevo."
             seleccionar_servicio
         }
     }
