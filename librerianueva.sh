@@ -1128,9 +1128,9 @@ generar_keystore() {
 }
 
 # Configuración del servidor FTP
-FTP_SERVER="192.168.100.162"  # Cambia por la IP de tu servidor
+FTP_SERVER="192.168.1.128"  # Cambia por la IP de tu servidor
 FTP_USER="linux"            # O "windows" según corresponda
-FTP_PASS="1234"              # Contraseña
+FTP_PASS="123"              # Contraseña
 
 seleccionar_version_ftp() {
     local carpeta_ftp
