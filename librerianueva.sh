@@ -1208,7 +1208,7 @@ proceso_instalacion_ftp() {
 instalar_apache_ftp() {
     echo "Descargando e instalando Apache versión $version desde el servidor FTP..."
 
-    FTP_PATH="apache"  # Se eliminó 'linux/'
+    FTP_PATH="linux/apache"  # Se eliminó 'linux/'
 
     # Descargar Apache desde el FTP usando las constantes globales
     wget --ftp-user="$FTP_USER" --ftp-password="$FTP_PASS" "ftp://$FTP_SERVER/$FTP_PATH/$version" -O "/tmp/$version"
