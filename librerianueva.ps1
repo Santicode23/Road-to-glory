@@ -1558,7 +1558,7 @@ function instalar_tomcat_ftp {
     Write-Host "JAVA_HOME configurado correctamente en: $env:JAVA_HOME"
 
     # Definir ruta de descarga desde el FTP
-    $ftpUri = "ftp://$FTP_SERVER/tomcat/$global:version"
+    $ftpUri = "ftp://$FTP_SERVER/windows/tomcat/$global:version"
     $destinoZip = "$env:USERPROFILE\Downloads\tomcat-$global:version.zip"
     $extraerDestino = "C:\Tomcat"
 
