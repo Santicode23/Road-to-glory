@@ -54,7 +54,7 @@ crear_estructura_ftp() {
     echo "Creando estructura de directorios FTP..."
     
     # Crear carpetas principales
-    sudo mkdir -p $FTP_ROOT/{linux/windows}/{apache,tomcat,nginx}
+    sudo mkdir -p $FTP_ROOT/{linux,windows}/{apache,tomcat,nginx}
     
     # Establecer permisos y propietarios
     sudo chmod -R 755 $FTP_ROOT
