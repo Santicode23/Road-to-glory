@@ -368,52 +368,49 @@ $global:versions = @()  # Almacena un array con las versiones disponibles del se
 
 function seleccionar_servicio {
     param (
-        [string]$modo
+        [string]$modo  # Parámetro opcional que indica si es "ftp"
     )
 
-    Write-Host "Obteniendo lista de servicios desde el servidor FTP..."
+    Write-Host "Seleccione el servicio que desea instalar:"
 
-    # Ruta raíz del FTP según el modo
-    $basePath = if ($modo -eq "ftp") { "windows" } else { "web" }
+    if ($modo -eq "ftp") {
+        Write-Host "1.- IIS (solo se instala desde web, si quiere instalarlo regrese al instalador de web)"
+    } else {
+        Write-Host "1.- IIS"
+    }
 
-    $ftpUri = "ftp://$FTP_SERVER/$basePath/"
+    Write-Host "2.- Apache"
+    Write-Host "3.- Tomcat"
+    $opcion = Read-Host "Opción"
 
-    try {
-        $request = [System.Net.FtpWebRequest]::Create($ftpUri)
-        $request.Method = [System.Net.WebRequestMethods+Ftp]::ListDirectory
-        $request.Credentials = New-Object System.Net.NetworkCredential($FTP_USER, $FTP_PASS)
-        $request.UseBinary = $true
-        $request.UsePassive = $true
-
-        $response = $request.GetResponse()
-        $stream = $response.GetResponseStream()
-        $reader = New-Object System.IO.StreamReader($stream)
-        $servicios = $reader.ReadToEnd() -split "`r`n"
-
-        $reader.Close()
-        $response.Close()
-
-        if ($servicios.Count -eq 0 -or -not $servicios[0]) {
-            Write-Host "No se encontraron servicios disponibles en el servidor FTP."
-            return
+    switch ($opcion) {
+        "1" {
+            if ($modo -eq "ftp") {
+                Write-Host "IIS no es descargable desde FTP. Si desea instalarlo, regrese al instalador de Web."
+                return
+            }
+            $global:servicio = "IIS"
+            Write-Host "Servicio seleccionado: IIS"
+            obtener_versiones_IIS
         }
-
-        Write-Host "Seleccione el servicio que desea instalar:"
-        for ($i = 0; $i -lt $servicios.Count; $i++) {
-            Write-Host "$($i+1).- $($servicios[$i])"
+        "2" {
+            $global:servicio = "Apache"
+            Write-Host "Servicio seleccionado: Apache"
+            if ($modo -ne "ftp") {
+                obtener_versiones_apache
+            }
         }
-
-        $opcion = Read-Host "Opción"
-        if ($opcion -match "^\d+$" -and $opcion -ge 1 -and $opcion -le $servicios.Count) {
-            $global:servicio = $servicios[$opcion - 1]
-            Write-Host "Servicio seleccionado: $global:servicio"
-        } else {
+        "3" {
+            $global:servicio = "Tomcat"
+            Write-Host "Servicio seleccionado: Tomcat"
+            if ($modo -ne "ftp") {
+                obtener_versiones_tomcat
+            }
+        }
+        default {
             Write-Host "Opción no válida. Intente de nuevo."
             seleccionar_servicio -modo $modo
         }
-
-    } catch {
-        Write-Host "Error al obtener la lista de servicios: $_"
     }
 }
 
@@ -1277,18 +1274,30 @@ $FTP_USER = "windows"          # Usuario para Windows
 $FTP_PASS = "1234"              # Contraseña
 
 function seleccionar_version_ftp {
+    # Si el servicio es IIS, no permitir selección de versión
     if ($global:servicio -eq "IIS") {
-        Write-Host "IIS no tiene versiones seleccionables. Se instalará la versión predeterminada."
+        Write-Host "IIS no tiene versiones seleccionables. Se instalará la versión predeterminada para Windows Server."
         $global:version = "IIS (Versión según sistema operativo)"
         return
     }
 
-    $carpeta_ftp = "$global:servicio"
+    # Ajustar la carpeta FTP según el servicio seleccionado
+    $carpeta_ftp = switch ($global:servicio) {
+        "Apache" { "apache" }
+        "Tomcat" { "tomcat" }
+        "Nginx" { "nginx" }
+        default {
+            Write-Host "Servicio no válido."
+            return
+        }
+    }
 
     Write-Host "Conectando al servidor FTP para listar versiones de $global:servicio..."
 
+    # Definir la URL del FTP
     $ftpUri = "ftp://$FTP_SERVER/windows/$carpeta_ftp/"
 
+    # Crear la solicitud FTP para obtener la lista de archivos
     try {
         $request = [System.Net.FtpWebRequest]::Create($ftpUri)
         $request.Method = [System.Net.WebRequestMethods+Ftp]::ListDirectory
@@ -1304,14 +1313,20 @@ function seleccionar_version_ftp {
         $reader.Close()
         $response.Close()
 
+        # Filtrar solo archivos válidos según el servicio
+        $versionesDisponibles = $versionesDisponibles | Where-Object { 
+            $_ -match '^(httpd-[0-9]+\.[0-9]+\.[0-9]+.*\.zip|apache-tomcat-[0-9]+\.[0-9]+\.[0-9]+.*\.zip|nginx-[0-9]+\.[0-9]+\.[0-9]+.*\.zip)$' 
+        }
+
         if ($versionesDisponibles.Count -eq 0 -or -not $versionesDisponibles[0]) {
             Write-Host "No se encontraron versiones disponibles en el servidor FTP para $global:servicio."
             return
         }
 
+        # Mostrar opciones y permitir selección
         Write-Host "Seleccione la versión disponible:"
         for ($i = 0; $i -lt $versionesDisponibles.Count; $i++) {
-            Write-Host "$($i+1).- $($versionesDisponibles[$i])"
+            Write-Host "$($i+1). $($versionesDisponibles[$i])"
         }
 
         $seleccion = Read-Host "Ingrese el número de la versión deseada"
@@ -1320,7 +1335,7 @@ function seleccionar_version_ftp {
             Write-Host "Versión seleccionada: $global:version"
         } else {
             Write-Host "Opción no válida, intente de nuevo."
-            seleccionar_version_ftp
+            seleccionar_version_ftp  # Volver a ejecutar la función si la opción no es válida
         }
     } catch {
         Write-Host "Error al conectar al servidor FTP: $_"
@@ -1335,56 +1350,29 @@ function proceso_instalacion_ftp {
 
     Write-Host "Iniciando instalación desde FTP de $global:servicio versión $global:version en el puerto $global:puerto..."
 
-    switch ($global:servicio.ToLower()) {
-        "apache" {
+    switch ($global:servicio) {
+        "Apache" {
             instalar_apache_ftp
         }
-        "tomcat" {
+        "Tomcat" {
             instalar_tomcat_ftp
         }
-        "nginx" {
-            instalar_nginx_ftp
-        }
-        "iis" {
-            Write-Host "IIS no se puede instalar desde FTP. Use el instalador web en su lugar."
+        "IIS" {
+            Write-Host "Error: IIS no se puede instalar desde FTP. Use el instalador web en su lugar."
             return
         }
         default {
-            Write-Host "Servicio genérico detectado. Iniciando instalación genérica de $global:servicio..."
-            instalar_generico_ftp
+            Write-Host "Servicio desconocido o no soportado en FTP. No se puede proceder."
+            return
         }
     }
 
     Write-Host "Instalación completada para $global:servicio versión $global:version en el puerto $global:puerto."
 
-    # Limpiar variables globales
+    # Limpiar variables globales después de la instalación
     $global:servicio = $null
     $global:version = $null
     $global:puerto = $null
-}
-
-function instalar_generico_ftp {
-    Write-Host "Instalando $global:servicio desde el paquete $global:version..."
-
-    # Ejemplo simple de descarga
-    $ftpFilePath = "ftp://$FTP_SERVER/windows/$global:servicio/$global:version"
-    $localPath = "C:\Instaladores\$global:version"
-
-    try {
-        # Descargar el archivo desde el FTP
-        $webClient = New-Object System.Net.WebClient
-        $webClient.Credentials = New-Object System.Net.NetworkCredential($FTP_USER, $FTP_PASS)
-        $webClient.DownloadFile($ftpFilePath, $localPath)
-
-        Write-Host "Descarga completada. Archivo guardado en $localPath"
-
-        # Aquí puedes poner lógica adicional de descompresión o ejecución según el servicio
-        # Expand-Archive -Path $localPath -DestinationPath "C:\Servicios\$global:servicio"
-
-        Write-Host "$global:servicio instalado correctamente (instalación genérica)."
-    } catch {
-        Write-Host "Error durante la descarga o instalación de $global:servicio: $_"
-    }
 }
 
 function instalar_apache_ftp {
