@@ -488,30 +488,45 @@ seleccionar_servicio() {
 
 
 # Función para seleccionar la versión de un servicio ya seleccionado
-seleccionar_version() {
-    if [[ -z "$servicio" ]]; then
-        echo "Debe seleccionar un servicio antes de elegir la versión."
+seleccionar_servicio() {
+    local modo=$1  # "ftp" o vacío
+
+    echo "Obteniendo lista de servicios desde el servidor FTP..."
+
+    # Define la ruta base en el FTP
+    local base_path
+    [[ "$modo" == "ftp" ]] && base_path="linux" || base_path="web"
+
+    # Obtener lista de carpetas (servicios) en el FTP
+    servicios=$(curl -s --user "$FTP_USER:$FTP_PASS" "ftp://$FTP_SERVER/$base_path/" | awk '{print $NF}')
+
+    # Verificar si encontró algo
+    if [[ -z "$servicios" ]]; then
+        echo "No se encontraron servicios disponibles en el servidor FTP."
         return
     fi
 
-    echo "Seleccione la versión de $servicio:"
-    echo "1.- Versión Estable (LTS): ${versions[0]}"
-    echo "2.- Versión de Desarrollo: ${versions[1]}"
-    read -p "Opción: " opcion
+    echo "Seleccione el servicio que desea instalar:"
+    select opcion in $servicios; do
+        if [[ -n "$opcion" ]]; then
+            servicio="$opcion"
+            echo "Servicio seleccionado: $servicio"
 
-    case $opcion in
-        1)
-            version=${versions[0]}
-            echo "Versión seleccionada: $version"
-            ;;
-        2)
-            version=${versions[1]}
-            echo "Versión seleccionada: $version"
-            ;;
-        *)
-            echo "Opción no válida."
-            ;;
-    esac
+            # Si no es FTP, llama a la función de obtener versiones correspondiente (solo si tienes funciones específicas)
+            if [[ "$modo" != "ftp" ]]; then
+                case "$servicio" in
+                    "apache") obtener_versiones_apache ;;
+                    "tomcat") obtener_versiones_tomcat ;;
+                    "nginx") obtener_versiones_nginx ;;
+                    *) obtener_versiones_generico "$servicio" ;;
+                esac
+            fi
+
+            break
+        else
+            echo "Opción no válida. Intente de nuevo."
+        fi
+    done
 }
 
 # Función para verificar si un puerto está en la lista de restringidos
@@ -1102,31 +1117,29 @@ FTP_USER="linux"            # O "windows" según corresponda
 FTP_PASS="1234"              # Contraseña
 
 seleccionar_version_ftp() {
-    local carpeta_ftp
-
-    # Ajustar la ruta del FTP según el servicio seleccionado
-    case "$servicio" in
-        "Apache") carpeta_ftp="apache" ;;
-        "Tomcat") carpeta_ftp="tomcat" ;;
-        "Nginx") carpeta_ftp="nginx" ;;
-        *) echo "Servicio no válido."; return ;;
-    esac
+    # Verificar si seleccionó algún servicio
+    if [[ -z "$servicio" ]]; then
+        echo "Primero debe seleccionar un servicio."
+        return
+    fi
 
     echo "Conectando al servidor FTP para listar versiones de $servicio..."
 
-    # Obtener la lista de versiones disponibles en la carpeta FTP
-    versiones_disponibles=$(curl -s --user "$FTP_USER:$FTP_PASS" "ftp://$FTP_SERVER/linux/$carpeta_ftp/" | awk '{print $NF}' | grep -E '^(apache-tomcat-[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz|nginx-[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz|httpd-[0-9]+\.[0-9]+(\.[0-9]+)?\.tar\.gz)$')
+    # Ruta del servicio en el FTP
+    local ftp_ruta="ftp://$FTP_SERVER/linux/$servicio/"
 
-    # Verificar si se encontraron archivos
+    # Obtener lista de archivos (versiones)
+    versiones_disponibles=$(curl -s --user "$FTP_USER:$FTP_PASS" "$ftp_ruta" | awk '{print $NF}')
+
     if [[ -z "$versiones_disponibles" ]]; then
-        echo "No se encontraron versiones disponibles en el servidor FTP para $servicio."
+        echo "No se encontraron versiones disponibles para $servicio en el FTP."
         return
     fi
 
     echo "Seleccione la versión disponible:"
     select archivo in $versiones_disponibles; do
         if [[ -n "$archivo" ]]; then
-            version="$archivo"  # Guardamos solo el nombre del archivo exacto
+            version="$archivo"
             echo "Versión seleccionada: $version"
             break
         else
