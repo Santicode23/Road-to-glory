@@ -1295,7 +1295,7 @@ function seleccionar_version_ftp {
     Write-Host "Conectando al servidor FTP para listar versiones de $global:servicio..."
 
     # Definir la URL del FTP
-    $ftpUri = "ftp://$FTP_SERVER/$carpeta_ftp/"
+    $ftpUri = "ftp://$FTP_SERVER/windows/$carpeta_ftp/"
 
     # Crear la solicitud FTP para obtener la lista de archivos
     try {
