@@ -617,7 +617,7 @@ function verificar_puerto_restringido {
         [int]$puerto
     )
     # Lista de puertos restringidos por servicios comunes o navegadores
-    $puertos_restringidos = @(21, 22, 23, 25, 53, 110, 143, 161, 162, 389, 465, 993, 995, 1433, 1434, 1521, 3306, 3389,
+    $puertos_restringidos = @(21, 22, 23, 25, 53, 95, 110, 143, 161, 162, 389, 465, 993, 995, 1433, 1434, 1521, 3306, 3389,
                               1, 7, 9, 11, 13, 15, 17, 19, 137, 138, 139, 2049, 3128, 6000)
 
     return $puerto -in $puertos_restringidos
@@ -1269,9 +1269,9 @@ function seleccionar_protocolo {
 }
 
 # Configuración del servidor FTP
-$FTP_SERVER = "192.168.1.128"  # Cambia por la IP de tu servidor
+$FTP_SERVER = "192.168.100.162"  # Cambia por la IP de tu servidor
 $FTP_USER = "windows"          # Usuario para Windows
-$FTP_PASS = "123"              # Contraseña
+$FTP_PASS = "1234"              # Contraseña
 
 function seleccionar_version_ftp {
     # Si el servicio es IIS, no permitir selección de versión
