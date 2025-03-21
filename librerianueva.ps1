@@ -1389,7 +1389,7 @@ function instalar_apache_ftp {
     }
 
     # Definir ruta de descarga desde el FTP
-    $ftpUri = "ftp://$FTP_SERVER/apache/$global:version"
+    $ftpUri = "ftp://$FTP_SERVER/windows/apache/$global:version"
     $destinoZip = "$env:USERPROFILE\Downloads\apache-$global:version.zip"
     $extraerdestino = "C:\Apache24"
 
