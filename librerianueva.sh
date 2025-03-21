@@ -1320,7 +1320,7 @@ EOF
 instalar_tomcat_ftp() {
     echo "Descargando e instalando Tomcat versión $version desde el servidor FTP..."
 
-    FTP_PATH="tomcat"  # Se eliminó 'linux/'
+    FTP_PATH="linux/tomcat"  # Se eliminó 'linux/'
 
     # Descargar Tomcat desde el FTP usando las constantes globales
     wget --ftp-user="$FTP_USER" --ftp-password="$FTP_PASS" "ftp://$FTP_SERVER/$FTP_PATH/$version" -O "/tmp/$version"
