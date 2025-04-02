@@ -66,5 +66,5 @@ EOF
     #Reiniciar bind9
     echo "Reiniciando bind9"
     sudo systemctl restart bind9
-    echo "Configuración finalizada :)"
+    echo "Configuración finalizada"
 }
