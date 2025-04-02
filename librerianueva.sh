@@ -698,41 +698,10 @@ EOF
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PERO QUE DISTINGUIDO PEDRI</title>
-    <style>
-        body {
-            text-align: center;
-            background-color: #004c98;
-            color: white;
-            font-family: Arial, sans-serif;
-        }
-        h1 {
-            margin-top: 20px;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        marquee {
-            margin-top: 50px;
-        }
-        img {
-            width: 300px;
-            height: auto;
-            border-radius: 10px;
-            box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.5);
-            margin: 0 20px;
-        }
-    </style>
+    <title>apache</title>
 </head>
 <body>
-    <h1>PERO QUE DISTINGUIDO PEDRI</h1>
-    <marquee behavior="scroll" direction="left" scrollamount="10">
-        <img src="https://upload.wikimedia.org/wikipedia/en/4/47/FC_Barcelona_%28crest%29.svg" 
-             alt="Escudo del FC Barcelona">
-        <img src="https://pbs.twimg.com/media/E5ZP9L2X0Ak8gN2.jpg:large" 
-             alt="Imagen del FC Barcelona">
-        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbFMCtfPdNYbLQL0fCGC_ntQuypliAFhJmcg&s" 
-             alt="Pedri Distinguido">
-    </marquee>
+    <h1>vivan los tigres</h1>
 </body>
 </html>
 EOF
@@ -1128,9 +1097,9 @@ generar_keystore() {
 }
 
 # Configuración del servidor FTP
-FTP_SERVER="192.168.1.128"  # Cambia por la IP de tu servidor
+FTP_SERVER="192.168.0.44"  # Cambia por la IP de tu servidor
 FTP_USER="linux"            # O "windows" según corresponda
-FTP_PASS="123"              # Contraseña
+FTP_PASS="1234"              # Contraseña
 
 seleccionar_version_ftp() {
     local carpeta_ftp
@@ -1146,7 +1115,7 @@ seleccionar_version_ftp() {
     echo "Conectando al servidor FTP para listar versiones de $servicio..."
 
     # Obtener la lista de versiones disponibles en la carpeta FTP
-    versiones_disponibles=$(curl -s --user "$FTP_USER:$FTP_PASS" "ftp://$FTP_SERVER/$carpeta_ftp/" | awk '{print $NF}' | grep -E '^(apache-tomcat-[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz|nginx-[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz|httpd-[0-9]+\.[0-9]+(\.[0-9]+)?\.tar\.gz)$')
+    versiones_disponibles=$(curl -s --user "$FTP_USER:$FTP_PASS" "ftp://$FTP_SERVER/linux/$carpeta_ftp/" | awk '{print $NF}' | grep -E '^(apache-tomcat-[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz|nginx-[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz|httpd-[0-9]+\.[0-9]+(\.[0-9]+)?\.tar\.gz)$')
 
     # Verificar si se encontraron archivos
     if [[ -z "$versiones_disponibles" ]]; then
@@ -1208,7 +1177,7 @@ proceso_instalacion_ftp() {
 instalar_apache_ftp() {
     echo "Descargando e instalando Apache versión $version desde el servidor FTP..."
 
-    FTP_PATH="apache"  # Se eliminó 'linux/'
+    FTP_PATH="linux/apache"  # Se eliminó 'linux/'
 
     # Descargar Apache desde el FTP usando las constantes globales
     wget --ftp-user="$FTP_USER" --ftp-password="$FTP_PASS" "ftp://$FTP_SERVER/$FTP_PATH/$version" -O "/tmp/$version"
@@ -1276,41 +1245,10 @@ EOF
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PERO QUE DISTINGUIDO PEDRI</title>
-    <style>
-        body {
-            text-align: center;
-            background-color: #004c98;
-            color: white;
-            font-family: Arial, sans-serif;
-        }
-        h1 {
-            margin-top: 20px;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        marquee {
-            margin-top: 50px;
-        }
-        img {
-            width: 300px;
-            height: auto;
-            border-radius: 10px;
-            box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.5);
-            margin: 0 20px;
-        }
-    </style>
+    <title>apache</title>
 </head>
 <body>
-    <h1>PERO QUE DISTINGUIDO PEDRI</h1>
-    <marquee behavior="scroll" direction="left" scrollamount="10">
-        <img src="https://upload.wikimedia.org/wikipedia/en/4/47/FC_Barcelona_%28crest%29.svg" 
-             alt="Escudo del FC Barcelona">
-        <img src="https://pbs.twimg.com/media/E5ZP9L2X0Ak8gN2.jpg:large" 
-             alt="Imagen del FC Barcelona">
-        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbFMCtfPdNYbLQL0fCGC_ntQuypliAFhJmcg&s" 
-             alt="Pedri Distinguido">
-    </marquee>
+    <h1>Vivan los tigres</h1>
 </body>
 </html>
 EOF
@@ -1320,7 +1258,7 @@ EOF
 instalar_tomcat_ftp() {
     echo "Descargando e instalando Tomcat versión $version desde el servidor FTP..."
 
-    FTP_PATH="tomcat"  # Se eliminó 'linux/'
+    FTP_PATH="linux/tomcat"  # Se eliminó 'linux/'
 
     # Descargar Tomcat desde el FTP usando las constantes globales
     wget --ftp-user="$FTP_USER" --ftp-password="$FTP_PASS" "ftp://$FTP_SERVER/$FTP_PATH/$version" -O "/tmp/$version"
