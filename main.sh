@@ -15,7 +15,7 @@ fi
 echo " --- PRACTICA SERVIDOR DE CORREO --- "
 # Configurar servidor DNS 
 echo "Configurando servidor DNS"
-ip_fija="10.0.0.20"
+ip_fija="192.168.0.20"
 dominio="elhueso.com"
 
 conf_dns "$ip_fija" "$dominio"
