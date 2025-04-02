@@ -36,7 +36,7 @@ fi
 cat /etc/mailname
 
 while true; do
-    echo "--- CONFIGURACIÓN SERVIDOR DE CORREO - ANDREA CASTELLANOS ---"
+    echo "--- CONFIGURACIÓN SERVIDOR DE CORREO"
     echo "1. Crear usuario"
     echo "2. Salir"
     read -p "Elija la opción que desea realizar (1-2): " opc
