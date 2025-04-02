@@ -13,9 +13,10 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 echo " --- PRACTICA SERVIDOR DE CORREO --- "
+sudo apt update
 # Configurar servidor DNS 
 echo "Configurando servidor DNS"
-ip_fija="192.168.0.20"
+ip_fija="20.0.0.10"
 dominio="elhueso.com"
 
 conf_dns "$ip_fija" "$dominio"
