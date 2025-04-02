@@ -8,12 +8,6 @@ conf_dns(){
     local dominio="$2"
     #Instalar bind9
 
-    # Verifica antes de instalar bin9
-    if verificar_servicio "bind9"; then
-        echo "Bind9 ya esta instalado y configurado"
-        return
-    fi
-
     echo "Instalando bind9"
     sudo apt-get install bind9 bind9utils bind9-doc -y
     sudo apt-get install dnsutils -y
