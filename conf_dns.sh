@@ -63,23 +63,6 @@ EOF
     sudo sed -i "/^nameserver /c\nameserver $ip" /etc/resolv.conf
     echo "Fijando la IP $ip para el servidor DNS"
 
-        #Fijar la IP
-    echo "network:
-      version: 2
-      renderer: networkd
-      ethernets:
-        enp0s3:
-          dhcp4: true
-        enp0s8:
-          addresses: [10.0.0.40/24]
-          nameservers:
-            addresses: [8.8.8.8, 8.8.4.4]" | sudo tee /etc/netplan/50-cloud-init.yaml > /dev/null
-    echo "Fijando la IP"
-    
-    #Aplicar cambios
-    sudo netplan apply
-    echo "Aplicando cambios"
-
     #Reiniciar bind9
     echo "Reiniciando bind9"
     sudo systemctl restart bind9
