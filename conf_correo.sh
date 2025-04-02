@@ -3,7 +3,7 @@
 
 conf_correo(){
     dominio="elhueso.com"
-    ip="10.0.0.20"
+    ip="192.168.0.20"
     # Actualiza la lista de paquetes 
     sudo apt update 
     sudo apt-get install apache2 -y
