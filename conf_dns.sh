@@ -6,23 +6,8 @@ source "./verificar_servicio.sh"
 conf_dns(){
     local ip="$1"
     local dominio="$2"
-    #Fijar la IP
-network:
-      ethernets:
-        enp0s3:
-          dhcp4: true
-        enp0s8:
-          addresses: [$ip/24]
-          nameservers:
-            addresses: [8.8.8.8, 1.1.1.1]" | sudo tee /etc/netplan/50-cloud-init.yaml > /dev/null
-      version: 2
-    echo "Fijando la IP"
-
-#Aplicar cambios
-sudo netplan apply
-echo "Aplicando cambios"
+    
     #Instalar bind9
-
     echo "Instalando bind9"
     sudo apt-get install bind9 bind9utils bind9-doc -y
     sudo apt-get install dnsutils -y
