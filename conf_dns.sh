@@ -16,7 +16,7 @@ conf_dns(){
         enp0s8:
           addresses: [$ip/24]
           nameservers:
-            addresses: [8.8.8.8, 8.8.4.4]" | sudo tee /etc/netplan/50-cloud-init.yaml > /dev/null
+            addresses: [8.8.8.8, 1.1.1.1]" | sudo tee /etc/netplan/50-cloud-init.yaml > /dev/null
     echo "Fijando la IP"
 
 #Aplicar cambios
