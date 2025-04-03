@@ -7,9 +7,7 @@ conf_dns(){
     local ip="$1"
     local dominio="$2"
     #Fijar la IP
-    echo "network:
-      version: 2
-      renderer: networkd
+network:
       ethernets:
         enp0s3:
           dhcp4: true
@@ -17,6 +15,7 @@ conf_dns(){
           addresses: [$ip/24]
           nameservers:
             addresses: [8.8.8.8, 1.1.1.1]" | sudo tee /etc/netplan/50-cloud-init.yaml > /dev/null
+      version: 2
     echo "Fijando la IP"
 
 #Aplicar cambios
