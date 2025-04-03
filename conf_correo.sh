@@ -5,7 +5,6 @@ conf_correo(){
     dominio="elhueso.com"
     ip="20.0.0.10"
     # Actualiza la lista de paquetes 
-    sudo apt update 
     sudo apt-get install apache2 -y
     
     sudo apt install software-properties-common -y
