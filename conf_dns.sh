@@ -67,4 +67,7 @@ EOF
     echo "Reiniciando bind9"
     sudo systemctl restart bind9
     echo "Configuración finalizada"
+    sudo ufw allow 53/udp
+    sudo ufw allow 53/tcp
+    sudo ufw reload
 }
