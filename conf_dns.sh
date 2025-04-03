@@ -6,14 +6,8 @@ source "./verificar_servicio.sh"
 conf_dns(){
     local ip="$1"
     local dominio="$2"
+    
     #Instalar bind9
-
-    # Verifica antes de instalar bin9
-    if verificar_servicio "bind9"; then
-        echo "Bind9 ya esta instalado y configurado"
-        return
-    fi
-
     echo "Instalando bind9"
     sudo apt-get install bind9 bind9utils bind9-doc -y
     sudo apt-get install dnsutils -y
@@ -72,5 +66,8 @@ EOF
     #Reiniciar bind9
     echo "Reiniciando bind9"
     sudo systemctl restart bind9
-    echo "Configuración finalizada :)"
+    echo "Configuración finalizada"
+    sudo ufw allow 53/udp
+    sudo ufw allow 53/tcp
+    sudo ufw reload
 }

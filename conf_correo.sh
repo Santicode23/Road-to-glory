@@ -3,14 +3,12 @@
 
 conf_correo(){
     dominio="elhueso.com"
-    ip="10.0.0.20"
+    ip="20.0.0.10"
     # Actualiza la lista de paquetes 
-    sudo apt update 
     sudo apt-get install apache2 -y
     
     sudo apt install software-properties-common -y
     sudo add-apt-repository ppa:ondrej/php -y
-    sudo apt update
     sudo apt install php7.4 libapache2-mod-php7.4 php-mysql -y
 
     # Evitar la pantalla interactiva de configuración

@@ -13,10 +13,9 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 echo " --- PRACTICA SERVIDOR DE CORREO --- "
-sudo apt update
 # Configurar servidor DNS 
 echo "Configurando servidor DNS"
-ip_fija="10.0.0.20"
+ip_fija="20.0.0.10"
 dominio="elhueso.com"
 
 conf_dns "$ip_fija" "$dominio"
@@ -36,7 +35,7 @@ fi
 cat /etc/mailname
 
 while true; do
-    echo "--- CONFIGURACIÓN SERVIDOR DE CORREO - ANDREA CASTELLANOS ---"
+    echo "--- CONFIGURACIÓN SERVIDOR DE CORREO"
     echo "1. Crear usuario"
     echo "2. Salir"
     read -p "Elija la opción que desea realizar (1-2): " opc
