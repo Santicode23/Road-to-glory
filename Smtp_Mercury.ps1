@@ -1,72 +1,61 @@
-param (
-    [string]$Dominio = "reprobados.com",
-    [string]$IP = "192.168.100.162",  # IP del adaptador puente
-    [string]$RutaInstalacion = "C:\Mercury",
-
-    [array]$Usuarios = @(
-        @{ Nombre = "pepito"; Clave = "correo123" },
-        @{ Nombre = "chabelo"; Clave = "correo456" }
-    )
-)
-
-function Verificar-Ejecutable {
-    $exePath = Join-Path $RutaInstalacion "mercury.exe"
-    if (!(Test-Path $exePath)) {
-        Write-Error "❌ No se encontró mercury.exe en $RutaInstalacion"
-        Write-Host "➡️  Descárgalo desde https://www.pmail.com y colócalo ahí."
-        exit 1
-    }
+# Verifica si el script se ejecuta como administrador
+if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(`
+    [Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    Write-Host "Por favor, ejecuta este script como administrador." -ForegroundColor Red
+    exit
 }
 
-function Configurar-Mercury {
-    Write-Host "Configurando Mercury..."
-    $iniPath = Join-Path $RutaInstalacion "Mercury.ini"
+# VARIABLES
+$JAMES_VERSION = "3.6.0"
+$JAMES_URL = "https://downloads.apache.org/james/server/apache-james-${JAMES_VERSION}-app.zip"
+$INSTALL_DIR = "C:\James"
+$JAVA_URL = "https://download.oracle.com/java/17/latest/jdk-17_windows-x64_bin.exe"
+$JAVA_INSTALL_PATH = "C:\Program Files\Java"
+$DOMAIN = "reprobados.com"
 
-    $config = @"
-[General]
-Hostname=$Dominio
-IP_Interface=$IP
+# 1. INSTALAR JAVA
+Write-Host "Descargando e instalando Java 17..." -ForegroundColor Cyan
+Invoke-WebRequest $JAVA_URL -OutFile "$env:TEMP\java-installer.exe"
+Start-Process "$env:TEMP\java-installer.exe" -ArgumentList "/s INSTALLDIR=`"$JAVA_INSTALL_PATH`"" -Wait
 
-[SMTP]
-Port=25
+# Agregar Java al PATH
+$env:JAVA_HOME = "$JAVA_INSTALL_PATH\jdk-17"
+[Environment]::SetEnvironmentVariable("JAVA_HOME", $env:JAVA_HOME, [EnvironmentVariableTarget]::Machine)
+$env:Path += ";$env:JAVA_HOME\bin"
+[Environment]::SetEnvironmentVariable("Path", $env:Path, [EnvironmentVariableTarget]::Machine)
 
-[POP3]
-Port=110
+# 2. DESCARGAR Y EXTRAER APACHE JAMES
+Write-Host "Descargando Apache James $JAMES_VERSION..." -ForegroundColor Cyan
+Invoke-WebRequest -Uri $JAMES_URL -OutFile "$env:TEMP\james.zip"
+Expand-Archive -Path "$env:TEMP\james.zip" -DestinationPath $INSTALL_DIR -Force
+
+# 3. CONFIGURAR JAMES PARA EL DOMINIO
+$configPath = Join-Path $INSTALL_DIR "apache-james-${JAMES_VERSION}-app\conf"
+$domainCmd = Join-Path $INSTALL_DIR "apache-james-${JAMES_VERSION}-app\bin\james-cli.bat"
+
+Write-Host "Configurando dominio $DOMAIN..." -ForegroundColor Cyan
+Start-Sleep -Seconds 10 # espera a que James arranque antes de ejecutar comandos
+
+& $domainCmd AddDomain $DOMAIN
+& $domainCmd AddUser prueba@$DOMAIN 12345
+
+# 4. CONFIGURAR FIREWALL (SMTP 25, POP3 110, IMAP 143)
+Write-Host "Configurando reglas de firewall..." -ForegroundColor Cyan
+New-NetFirewallRule -DisplayName "Allow SMTP (25)" -Direction Inbound -LocalPort 25 -Protocol TCP -Action Allow
+New-NetFirewallRule -DisplayName "Allow POP3 (110)" -Direction Inbound -LocalPort 110 -Protocol TCP -Action Allow
+New-NetFirewallRule -DisplayName "Allow IMAP (143)" -Direction Inbound -LocalPort 143 -Protocol TCP -Action Allow
+
+# 5. CREAR SERVICIO Y ARRANCARLO
+$serviceScript = @"
+sc create ApacheJames binPath= `"cmd /c start /min $INSTALL_DIR\apache-james-${JAMES_VERSION}-app\bin\james.bat`" start= auto
+sc description ApacheJames "Apache James Mail Server"
 "@
+Invoke-Expression $serviceScript
+Start-Service ApacheJames
 
-    $config | Set-Content -Path $iniPath -Encoding ASCII
-}
-
-function Agregar-Usuarios {
-    Write-Host "Agregando usuarios..."
-    foreach ($usuario in $Usuarios) {
-        $nombre = $usuario.Nombre
-        $clave = $usuario.Clave
-        Write-Host "  - $nombre@$Dominio"
-        $pmfile = Join-Path $RutaInstalacion "MAIL\$nombre\PMail\"
-        New-Item -ItemType Directory -Path $pmfile -Force | Out-Null
-        Add-Content -Path (Join-Path $RutaInstalacion "MAIL\passwd.dat") -Value "$nombre|$clave"
-    }
-}
-
-function Instalar-Servicio {
-    Write-Host "Instalando Mercury como servicio..."
-    $exe = Join-Path $RutaInstalacion "mercury.exe"
-    Start-Process -FilePath $exe -ArgumentList "/install" -Wait
-}
-
-function Configurar-Firewall {
-    Write-Host "Configurando reglas de firewall..."
-    New-NetFirewallRule -DisplayName "SMTP Mercury" -Direction Inbound -Protocol TCP -LocalPort 25 -Action Allow
-    New-NetFirewallRule -DisplayName "POP3 Mercury" -Direction Inbound -Protocol TCP -LocalPort 110 -Action Allow
-}
-
-# === Flujo principal ===
-Verificar-Ejecutable
-Configurar-Mercury
-Agregar-Usuarios
-Instalar-Servicio
-Configurar-Firewall
-
-Write-Host "`Mercury Mail instalado y configurado correctamente."
-Write-Host "Puedes probar los correos en Thunderbird o SquirrelMail apuntando a $IP"
+# 6. VERIFICACIÓN
+Write-Host "`n✅ Apache James instalado, configurado y corriendo como servicio." -ForegroundColor Green
+Write-Host "✔️ Reglas de firewall aplicadas (SMTP, POP3, IMAP)." -ForegroundColor Green
+Write-Host "Puedes conectarte desde otra VM con Thunderbird o SquirrelMail." -ForegroundColor Yellow
+Write-Host "Servidor: la IP del adaptador puente (`$(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -like '*Ethernet*' -and $_.PrefixOrigin -eq 'Dhcp' }).IPAddress`)"
+Write-Host "Usuario: prueba@$DOMAIN | Contraseña: 12345" -ForegroundColor Cyan
