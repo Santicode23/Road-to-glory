@@ -29,63 +29,6 @@ if ($vcInstalled) {
     Write-Host "Visual C++ Redistributable instalado correctamente."
 }
 
-# Verificar e instalar Amazon Corretto JDK 21
-Write-Host "`nVerificando Amazon Corretto JDK 21..."
-
-$jdkInstallPath = Get-ChildItem -Path $jdkBasePath -Directory | Where-Object { $_.Name -match "^jdk21.*" } | Select-Object -ExpandProperty FullName -First 1
-
-if ($jdkInstallPath -and (Test-Path "$jdkInstallPath\bin\java.exe")) {
-    Write-Host "Amazon Corretto JDK 21 ya está instalado en: $jdkInstallPath"
-} else {
-    Write-Host "Falta JDK 21. Descargando e instalando..."
-    $jdkUrl = "https://corretto.aws/downloads/latest/amazon-corretto-21-x64-windows-jdk.zip"
-    $jdkZipPath = "$env:TEMP\Corretto21.zip"
-
-    Invoke-WebRequest -Uri $jdkUrl -OutFile $jdkZipPath
-
-    if (-Not (Test-Path $jdkBasePath)) {
-        New-Item -ItemType Directory -Path $jdkBasePath | Out-Null
-    }
-
-    Write-Host "Extrayendo Amazon Corretto JDK 21..."
-    Expand-Archive -Path $jdkZipPath -DestinationPath $jdkBasePath -Force
-    Remove-Item -Path $jdkZipPath -Force
-
-    $jdkInstallPath = Get-ChildItem -Path $jdkBasePath -Directory | Where-Object { $_.Name -match "^jdk21.*" } | Select-Object -ExpandProperty FullName -First 1
-
-    if (-not $jdkInstallPath) {
-        Write-Host "❌ Error: No se encontró la carpeta del JDK después de la instalación."
-        exit
-    }
-
-    Write-Host "Amazon Corretto JDK 21 instalado en: $jdkInstallPath"
-}
-
-# Configurar JAVA_HOME y agregar al PATH
-Write-Host "`nConfigurando JAVA_HOME y PATH..."
-
-[System.Environment]::SetEnvironmentVariable("JAVA_HOME", $jdkInstallPath, [System.EnvironmentVariableTarget]::Machine)
-
-$currentPath = [System.Environment]::GetEnvironmentVariable("Path", [System.EnvironmentVariableTarget]::Machine)
-if ($currentPath -notlike "*$jdkInstallPath\bin*") {
-    $newPath = "$currentPath;$jdkInstallPath\bin"
-    [System.Environment]::SetEnvironmentVariable("Path", $newPath, [System.EnvironmentVariableTarget]::Machine)
-}
-
-$env:JAVA_HOME = $jdkInstallPath
-$env:Path = "$env:Path;$jdkInstallPath\bin"
-
-Write-Host "JAVA_HOME configurado correctamente en: $env:JAVA_HOME"
-
-Write-Host "`nVerificando configuración de Java..."
-$javaVersion = & "$jdkInstallPath\bin\java.exe" -version 2>&1
-if ($javaVersion -match "21\.") {
-    Write-Host "✅ Java configurado correctamente:`n$javaVersion"
-} else {
-    Write-Host "❌ Error: JAVA_HOME no está configurado correctamente."
-    exit
-}
-
 # ------------------------
 # 2. FIREWALL
 # ------------------------
