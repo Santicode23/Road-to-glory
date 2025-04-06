@@ -1,140 +1,85 @@
-Write-Host "CONFIGURACION DNS EN WINDOWS SERVER"
+function validar_ip {
+    param (
+        [string]$ip
+    )
 
-#Variables para la ip y el dominio
-$IP = ""
-$DOMINIO = ""
-
-#FUNCIONES PARA VALIDAD TANTO LA IP COMO EL DOMINIO
-#Función para validar IP
-function validacion_ip_correcta {
-    param ( [string]$IP )
-    $regex_ipv4 = '^([0-9]{1,3}\.){3}[0-9]{1,3}$'
-
-    if ($IP -notmatch $regex_ipv4) {
-        Write-Host "La IP ingresada no tiene el formato valido."
-        return $false
-    }
-
-    $octets = $IP.Split('.')
-    foreach ($octet in $octets) {
-        if (-not ($octet -as [int] -and $octet -ge 0 -and $octet -le 255)) {
-            Write-Host "Error: La IP no es valida, los octetos deben estar entre 0 y 255."
-            return $false
-        }
-    }
-
-    if ([int]$octets[3] -eq 0) {
-        Write-Host "Error: La IP ingresada es una direccion de red y no es valida."
-        return $false
-    }
-
-    if ([int]$octets[3] -eq 255) {
-        Write-Host "Error: La IP ingresada es una direccion de broadcast y no es valida."
-        return $false
-    }
-
-    Write-Host "Okay, la IP ingresada es valida..."
-    return $true
+    $regex = "^((25[0-4]|2[0-4][0-9]|1?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|1?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|1?[0-9][0-9]?)\.(25[0-4]|2[0-4][0-9]|1?[0-9][0-9]?))$"
+    
+    return $ip -match $regex
 }
 
-#Función para validar dominio
-function validacion_dominio {
-    param ( [string]$DOMINIO )
+function validar_dominio {
+    param (
+        [string]$dominio
+    )
 
-    $regex_dominio = '^(www\.)?[a-z0-9-]{1,30}\.[a-z]{2,6}$'
+    $regex = '^(?:[a-zA-Z0-9-]{4,}\.)+(com|net|edu|blog|mx|tech|site)$'
 
-    if ($DOMINIO -notmatch $regex_dominio) {
-        Write-Host "El dominio ingresado no tiene el formato valido."
-        return $false
-    }
-
-    if ($DOMINIO.StartsWith("-") -or $DOMINIO.EndsWith("-")) {
-        Write-Host "El dominio ingresado no puede empezar ni terminar con un guion."
-        return $false
-    }
-
-    Write-Host "Okay, el dominio es valido..."
-    return $true
+    return $dominio -match $regex
 }
 
-#Pedir la IP hasta que sea válida
+Write-Host "Bienvenido a la configuración de tu servidor DNS"
+
+# Pedir dominio hasta que sea válido
+do{
+    $dominio = Read-Host "Introduce el nombre de dominio que deseas configurar"
+    if (-not(validar_dominio $dominio)) {
+        Write-Output "Dominio no válido."
+    } else {
+        Write-Output "Dominio valido. $dominio"
+    }
+} until (validar_dominio $dominio)
+
+# Pedir IP hasta que sea válida
 do {
-    $IP = Read-Host "Ingrese la IP: "
-} until (
-    (validacion_ip_correcta $IP) 
-)
+    $ip = Read-Host "Introduce la dirección IP de tu servidor DNS"
+    if (-not(validar_ip $ip)) {
+        Write-Output "IP no válida."
+        break
+    } else {
+        Write-Output "IP valida: $ip"
+    }
+} until (validar_ip $ip)
 
-#Pedir el dominio hasta que sea válido
-do {
-    $DOMINIO = Read-Host "Ingrese el Dominio: "
-} until (
-    (validacion_dominio $DOMINIO)
-)
+$partes = $ip -split "\."
+$partes[3] = "0"
+$IPScope = ($partes[0..2] -join ".") + ".0/24"
+$NetworkID = ($partes[2..0] -join ".") + ".in-addr.arpa.dns"
+Write-Host "Dirección IP separada por partes" -ForegroundColor Green
+#Fijar IP
+Write-Host "Fijando IP..." -ForegroundColor Green
+New-NetIPAddress -IPAddress $ip -InterfaceAlias "Ethernet 2" -PrefixLength 24
 
-#DIVIDIR LA IP EN OCTETOS Y ALACENARLOS EN UN ARRAY, SEPARANDO POR EL PUNTO
-$OCTETOS = $IP -split '\.'
-#Los tres primeros octetos
-$Ptres_OCT = "$($OCTETOS[0]).$($OCTETOS[1]).$($OCTETOS[2])"  
-#Los tres primeros octetos invertidos
-$Ptres_INV_OCT = "$($OCTETOS[2]).$($OCTETOS[1]).$($OCTETOS[0])"
-#Ultimo octeto
-#$ULT_OCT = $OCTETOS[3]
-
-#Configuración del servidor DNS
-Write-Host "Configurando el servidor DNS con la IP: $IP y el DOMINIO: $DOMINIO..."
-
-#PONER LA IP ESTÁTICA en la interfaz de red (RED INTERNA)
-New-NetIPAddress -InterfaceAlias "Ethernet 2" -IPAddress $IP -PrefixLength 24
-Write-Host "La IP se configuro estatica...."
-#Configurar la dirección del servidor DNS en las interfaces de red
-Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses $IP
-Set-DnsClientServerAddress -InterfaceAlias "Ethernet 2" -ServerAddresses $IP
-#Write-Host "Configurando la direccion del servidor DNS con la interfaz de red..."
-
-#INSTALAR EL SERVICIO DE DNS y sus herramientas de administración
-Write-Host "COMENZANDO INSTALACION DEL SERVICIO DNS..."
+#Instalar servidor DNS
+Write-Host "Instalando servidor DNS..." -ForegroundColor Green
 Install-WindowsFeature -Name DNS -IncludeManagementTools
-if ($?) {
-    Write-Host "El servicio DNS se instalo correctamente.."
-    Get-WindowsFeature -Name DNS        #VERIFICACIÓN DE INSTALACIÓN
-} else {
-    Write-Host "Hubo un error al instalar el servicio DNS"
-    exit 1
-}
 
-#CREAR Y CONFIGURAR LAS ZONAS DNS
-Write-Host "...Creando y configurando las zonas DNS..."
-try { 
-    Add-DnsServerPrimaryZone -Name $DOMINIO -ZoneFile "$DOMINIO.dns" -DynamicUpdate None -PassThru 
-    
-    Add-DnsServerPrimaryZone -NetworkID "$Ptres_OCT.0/24" -ZoneFile "$Ptres_INV_OCT.in-addr.arpa" -DynamicUpdate None -PassThru
-    
-    Add-DnsServerResourceRecordA -Name "@" -ZoneName $DOMINIO -IPv4Address $IP -CreatePtr -PassThru     
+#Configurar zona principal
+Write-Host "Configurando zona principal..." -ForegroundColor Green
+Add-DnsServerPrimaryZone -Name $dominio -ZoneFile "$dominio.dns" -DynamicUpdate None -PassThru 
 
-    Add-DnsServerResourceRecordA -Name "www" -ZoneName $DOMINIO -IPv4Address $IP -CreatePtr -PassThru    
-    
-    #Add-DnsServerResourceRecordPtr -Name "$ULT_OCT" -ZoneName "$Ptres_INV_OCT.in-addr.arpa" -PtrDomainName "$DOMINIO"       #Crear un registro PTR para la resolución inversa
-} catch {
-    Write-Host "HUBO UN ERROR AL CREAR LAS ZONAS DNS: $_ "
-    exit 1
-}
-Get-DnsServerZone
+#Configurar zona inversa
+Write-Host "Configurando zona inversa..." -ForegroundColor Green
+Add-DnsServerPrimaryZone -NetworkID $IPScope -ZoneFile $NetworkID -DynamicUpdate None -PassThru
 
-#REINICIANDO EL SERVICIO PARA APLICAR CAMBIOS
-try {
-    Restart-Service -Name DNS
-    Write-Host "EL SERVICIO SE ESTA REINICIANDO...."
+#Crear registro A para dominio principal
+Write-Host "Creando registro A para dominio principal: $dominio" -ForegroundColor Green
+Add-DnsServerResourceRecordA -Name "@" -ZoneName $dominio -IPv4Address $ip -CreatePtr -PassThru
 
-} catch {
-    Write-Host "ERROR AL REINICIAR EL SERVICIO DNS: $_"
-}
+#Crear registro para www
+Write-Host "Creando registro A para www.$dominio" -ForegroundColor Green
+Add-DnsServerResourceRecordA -Name "www" -ZoneName $dominio -IPv4Address $ip -CreatePtr -PassThru
 
-#CONFIGURAR LA REGLA PARA PODER HACER PING CON EL CLIENTE
-Write-Host "Configurando para poder recibir y hacer ping con el cliente..."
-try {
-    New-NetFirewallRule -DisplayName "Permitir Ping Entrante" -Direction Inbound -Protocol ICMPv4 -Action Allow
-} catch {
-    Write-Host "ERROR AL CONFIGURAR LA REGLA DEL PING: $_"
-}
+#Configurar máquina como servidor DNS
+Write-Host "Configurando máquina como servidor DNS..." -ForegroundColor Green
+Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses $ip
+Set-DnsClientServerAddress -InterfaceAlias "Ethernet 2" -ServerAddresses $ip
 
-Write-Host "--- LISTO CONFIGURACION COMPLETADA ---" -ForegroundColor Green
+#Reiniciar servicio DNS
+Write-Host "Reiniciando servicio DNS..." -ForegroundColor Green
+Restart-Service -Name DNS
+
+#Habilitar pruebas ping 
+New-NetFirewallRule -DisplayName "Allow ICMPv4-In" -Protocol ICMPv4 -Direction Inbound -Action Allow
+
+Write-Host "Configuración finalizada. Puedes probar tu servidor DNS :)" -ForegroundColor Green
