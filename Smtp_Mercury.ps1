@@ -1,181 +1,156 @@
-# Script PowerShell para instalar y configurar un servidor de correo (SMTP/POP3/IMAP) en Windows Server
-# con hMailServer y SquirrelMail, siguiendo una lógica similar al script de Linux proporcionado.
+function Reglas_Correo_Firewall {
+    New-NetFirewallRule -DisplayName "SMTP" -Direction Inbound -Protocol TCP -LocalPort 25 -Action Allow
+    Write-Host "Regla de firewall creada: SMTP (Puerto 25)" -ForegroundColor Green
+    
+    New-NetFirewallRule -DisplayName "POP3" -Direction Inbound -Protocol TCP -LocalPort 110 -Action Allow
+    Write-Host "Regla de firewall creada: POP3 (Puerto 110)"
 
-# 1. Descargar e instalar hMailServer en modo silencioso
-$installerPath = "$env:TEMP\hMailServer.exe"
-$hMailUrl = "https://www.hmailserver.com/files/hMailServer-5.6.8-B2574.exe"
-$config = "C:\Program Files (x86)\hMailServer\Bin\hMailServer.ini"
+    New-NetFirewallRule -DisplayName "IMAP" -Direction Inbound -Protocol TCP -LocalPort 143 -Action Allow
+    Write-Host "Regla de firewall creada: IMAP (Puerto 143)"
+    
+    New-NetFirewallRule -DisplayName "James Server JMX" -Direction Inbound -Protocol TCP -LocalPort 9999 -Action Allow
+    Write-Host "Regla de firewall creada: JMX para James Server (Puerto 9999)"
+}
 
-if (-Not (Test-Path $installerPath)) {
-    # Forzar uso de TLS 1.2 para evitar errores de conexión
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+function Configuracion_JamesServer {
+    param ( [string]$IP, [string]$DOMINIO )
 
-    # Omitir validación de certificados SSL
-    Add-Type @"
-    using System.Net;
-    using System.Security.Cryptography.X509Certificates;
-    public class TrustAllCertsPolicy : ICertificatePolicy {
-        public bool CheckValidationResult(ServicePoint srvPoint, X509Certificate certificate, WebRequest request, int certificateProblem) {
-            return true;
+    $archivoSMTP = "C:\Apache_JS\JamesServer\conf\smtpserver.xml"
+    $archivoPOP3 = "C:\Apache_JS\JamesServer\conf\pop3server.xml"
+    $archivoDomList = "C:\Apache_JS\JamesServer\conf\domainlist.xml"
+    $archivoIMAP = "C:\Apache_JS\JamesServer\conf\imapserver.xml"
+
+    #Leer el contenido del archivo DOMAINLIST
+    $contenidoDL = Get-Content $archivoDomList
+    #Reemplazar líneas específicas
+    $contenidoDL = $contenidoDL -replace '       <domainname>localhost</domainname>', "       <domainname>$DOMINIO</domainname>"
+    #Guardar el contenido modificado
+    $contenidoDL | Set-Content $archivoDomList
+
+    #Leer el contenido del archivo SMTPSERVER
+    $contenidoSMTP = Get-Content $archivoSMTP
+    #Reemplazar líneas específicas
+    $contenidoSMTP = $contenidoSMTP -replace '<bind>0.0.0.0:25</bind>', "<bind>$IP:25</bind>"
+
+    $contenidoSMTP = $contenidoSMTP -replace '                        <domain>yourdomain1</domain>', "                        <domain>$DOMINIO</domain>"
+    #Guardar el contenido modificado
+    $contenidoSMTP | Set-Content $archivoSMTP
+
+    #Leer el contenido del archivo POP3SERVER
+    $contenidoPOP3 = Get-Content $archivoPOP3
+    #Reemplazar líneas específicas
+    $contenidoPOP3 = $contenidoPOP3 -replace '<bind>0.0.0.0:110</bind>', "<bind>$IP:110</bind>"
+    #Guardar el contenido modificado
+    $contenidoPOP3 | Set-Content $archivoPOP3
+
+    #Leer el contenido del archivo IMAPSERVER
+    $contenidoIMAP = Get-Content $archivoIMAP
+    #Reemplazar líneas específicas
+    $contenidoIMAP = $contenidoIMAP -replace '<bind>0.0.0.0:143</bind>', "<bind>$IP:143</bind>"
+    $contenidoIMAP = $contenidoIMAP -replace '       <plainAuthDisallowed>true</plainAuthDisallowed>', '       <plainAuthDisallowed>false</plainAuthDisallowed>'
+    #Guardar el contenido modificado
+    $contenidoIMAP | Set-Content $archivoIMAP
+
+    #----------------------------------------JAMES SERVER-------------------------------------------
+    Set-Location "C:\Apache_JS\JamesServer\bin"
+
+    #Iniciar y verificar estado del servicio
+    Write-Host "...Verificando e instalando Apache James Server..."
+    james status
+    james install
+    james status
+    james start
+    james status
+    #Esperar unos segundos para asegurar que el servicio esté levantado
+    Start-Sleep -Seconds 5
+
+    #Verificar dominios existentes
+    Write-Host "Verificando dominios actuales en James Server..." -ForegroundColor Yellow
+    .\james-cli --host 127.0.0.1 --port 9999 ListDomains
+    #.\james-cli ListDomains
+
+    #Agregar dominio
+    Write-Host "Agregando dominio: $DOMINIO" -ForegroundColor Yellow
+    .\james-cli AddDomain $DOMINIO
+
+    #Listar dominios nuevamente para confirmar
+    Write-Host "Dominios configurados tras agregar $DOMINIO" -ForegroundColor Yellow
+    .\james-cli --host 127.0.0.1 --port 9999 ListDomains
+    #.\james-cli ListDomains
+}
+
+function Agregar_Usuarios {
+    param ( [string]$DOMINIO )
+
+    Write-Host "[--- CREACION DE USUARIOS ---]"
+
+    do {
+        #Validacion del nombre de usuario
+        $USUARIO = ""
+        do {
+            $USUARIO = Read-Host "Ingresa el nombre del usuario (maximo 15 caracteres, solo letras, numeros y guion bajo, sin espacios) (Enter para cancelar)"
+            
+            #Si el usuario presiona Enter regresamos al menu
+            if ($USUARIO -eq "") {
+                Write-Host "Operacion cancelada. Regresando al menu..." -ForegroundColor Yellow
+                return
+            }
+
+            #Validar que solo contenga letras y números, sin espacios y maximo 8 caracteres
+            if ($USUARIO.Length -gt 15 -or $USUARIO -match '[^a-z0-9_]' -or $USUARIO -match '^\d+$' -or $USUARIO -cmatch '[A-Z]') {
+                Write-Host "El nombre de usuario NO ES VALIDO. Debe tener maximo 15 caracteres, solo letras, numeros y guion bajo, sin espacios." -ForegroundColor Red
+                $USUARIO = $null
+                continue
+            }
+        } while (-not $USUARIO)
+
+        #Validacion de la contraseña
+        $CONTRA = ""
+        do {
+            $CONTRA = Read-Host "Ingresa la contraseña del usuario $USUARIO (Enter para cancelar)"    #-AsSecureString
+
+            #Si el usuario presiona Enter regresamos al menu principal
+            if ($CONTRA -eq "") {
+                Write-Host "Operacion cancelada. Regresando al menu..." -ForegroundColor Yellow
+                return
+            }
+
+            #Verificar la contraseña con las condiciones requeridas
+            if ($CONTRA.Length -lt 8 -or $CONTRA -notmatch '\d' -or $CONTRA -notmatch '[a-z]' -or $CONTRA -notmatch '[A-Z]' -or $CONTRA -notmatch '[^\w\s]') {
+                Write-Host "La contraseña no es valida. Debe tener al menos 8 caracteres, un numero, una letra minuscula, una letra mayuscula y un simbolo especial." -ForegroundColor Red
+                $CONTRA = $null
+                continue
+            }
+            
+            #Confirmacion de la contraseña
+            $CONTRA2 = Read-Host "Confirma la contraseña (Enter para cancelar)"
+
+            if ($CONTRA2 -eq "") {
+                Write-Host "Operacion cancelada. Regresando al menu..." -ForegroundColor Yellow
+                return
+            }
+
+            if ($CONTRA -ne $CONTRA2) {
+                Write-Host "Las contraseñas no coinciden. Intenta nuevamente." -ForegroundColor Red
+                $CONTRA = $null
+            }
+
+        } while (-not $CONTRA)
+
+        #CREACION DE USUARIO CON LAS CREDENCIALES INGRESADAS
+        Write-Host "Creando usuario $USUARIO..."
+        & .\james-cli AddUser "$USUARIO@$DOMINIO" "$CONTRA"
+
+        #Preguntar si se desea agregar otro usuario
+        $crearOtro = Read-Host "¿Deseas crear otro usuario? (S/N)"
+        if ($crearOtro -eq "S" -or $crearOtro -eq "s") {
+            Write-Host "Creando otro usuario..." -ForegroundColor Green
+        } elseif ($crearOtro -eq "N" -or $crearOtro -eq "n") {
+            Write-Host "Operación terminada. Regresando..." -ForegroundColor Yellow
+            return
+        } else {
+            Write-Host "Opcion NO VALIDA. Por favor ingresa 'S' o 'N'." -ForegroundColor RED
+            continue
         }
-    }
-"@
-    [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
-
-    Invoke-WebRequest -Uri $hMailUrl -OutFile $installerPath
-
-    Write-Output "Instalando el hMailServer"
-    Start-Process -FilePath $installerPath -ArgumentList "/SILENT" -Wait
-
-    Stop-Service -name *hmail* -force
-    (Get-Content $config) -replace 'AdministratorPassword=.*', "AdministratorPassword=" | Set-Content $config
-    Start-Service -name *hmail*
+    } while ($true)
 }
-
-# 2. Configurar hMailServer: crear dominio, usuarios, habilitar servicios
-# Requiere que la COM API de hMailServer esté registrada
-$hMail = New-Object -ComObject hMailServer.Application
-$hMail.Authenticate("Administrator", "")  # Asume sin contraseña tras instalación
-
-# Crear dominio
-$domain = $hMail.Domains.Add()
-$domain.Name = "reprobados.local"
-$domain.Active = $true
-$domain.Save()
-
-# Crear usuarios
-[int]$numeroUsuarios = Read-Host "Ingrese el número de usuarios a crear"
-
-for ($i = 1; $i -le $numeroUsuarios; $i++) {
-    $usuario = Read-Host "Ingrese el nombre del usuario $i"
-    $contra = Read-Host "Ingrese la contraseña para $usuario"
-
-    $cuenta = $domain.Accounts.Add()
-    $cuenta.Address = "$usuario@reprobados.local"
-    $cuenta.Password = $contra
-    $cuenta.Active = $true
-    $cuenta.Save()
-}
-
-# 3. Configurar reglas de firewall
-New-NetFirewallRule -DisplayName "SMTP (25)" -Direction Inbound -Protocol TCP -LocalPort 25 -Action Allow
-New-NetFirewallRule -DisplayName "POP3 (110)" -Direction Inbound -Protocol TCP -LocalPort 110 -Action Allow
-New-NetFirewallRule -DisplayName "IMAP (143)" -Direction Inbound -Protocol TCP -LocalPort 143 -Action Allow
-New-NetFirewallRule -DisplayName "HTTP (80)" -Direction Inbound -Protocol TCP -LocalPort 80 -Action Allow
-
-# === CONFIGURACIONES ===
-
-# PHP
-$phpZipUrl = "https://windows.php.net/downloads/releases/archives/php-7.4.33-Win32-vc15-x64.zip"
-$phpZipPath = "$env:TEMP\php-7.4.33-Win32-vc15-x64.zip"
-$phpTargetPath = "C:\PHP"
-$phpIniPath = "$phpTargetPath\php.ini"
-
-# SquirrelMail
-$squirrelUrl = "https://gigenet.dl.sourceforge.net/project/squirrelmail/stable/1.4.22/squirrelmail-webmail-1.4.22.zip?viasf=1"
-$squirrelZipPath = "$env:TEMP\squirrelmail-1.4.22.zip"
-$squirrelTempExtract = "$env:TEMP\squirrelmail"
-$squirrelTargetPath = "C:\inetpub\wwwroot\squirrelmail"
-$squirrelDefaultConfig = "$squirrelTargetPath\config\config_default.php"
-$squirrelConfig = "$squirrelTargetPath\config\config.php"
-
-# === DESCARGAR E INSTALAR PHP ===
-
-if (-Not (Test-Path $phpTargetPath)) {
-    Write-Host "Descargando PHP 7.4.33..."
-    Invoke-WebRequest -Uri $phpZipUrl -OutFile $phpZipPath
-
-    Write-Host "Extrayendo PHP..."
-    Expand-Archive -Path $phpZipPath -DestinationPath $phpTargetPath -Force
-} else {
-    Write-Host "PHP ya está instalado en $phpTargetPath"
-}
-
-# Crear php.ini si no existe
-if (-Not (Test-Path $phpIniPath)) {
-    Copy-Item "$phpTargetPath\php.ini-development" $phpIniPath
-    Write-Host "php.ini creado desde php.ini-development"
-}
-
-# Activar extensiones y zona horaria
-Write-Host "Configurando php.ini..."
-(Get-Content $phpIniPath) |
-ForEach-Object {
-    $_ -replace '^;extension=mbstring', 'extension=mbstring' `
-       -replace '^;extension=imap', 'extension=imap' `
-       -replace '^;extension=sockets', 'extension=sockets' `
-       -replace '^;extension=openssl', 'extension=openssl' `
-       -replace '^;extension=fileinfo', 'extension=fileinfo' `
-       -replace ';date.timezone =', 'date.timezone = America/Mexico_City'
-} | Set-Content $phpIniPath
-
-# === VERIFICAR E INSTALAR VISUAL C++ REDISTRIBUTABLE 2015–2022 ===
-Write-Host "`nVerificando Visual C++ Redistributable 2015-2022..."
-
-$vcInstalled = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" |
-               Get-ItemProperty |
-               Where-Object { $_.DisplayName -match "Visual C\+\+ (2015|2017|2019|2022) Redistributable" -and $_.DisplayName -match "x64" }
-
-if ($vcInstalled) {
-    Write-Host "Visual C++ Redistributable 2015-2022 ya está instalado."
-} else {
-    Write-Host "No se encontró Visual C++ 2015-2022. Descargando e instalando..."
-
-    $vcUrl = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
-    $vcInstaller = "$env:TEMP\vc_redist.x64.exe"
-
-    Invoke-WebRequest -Uri $vcUrl -OutFile $vcInstaller
-    Start-Process -FilePath $vcInstaller -ArgumentList "/install /quiet /norestart" -Wait
-
-    Write-Host "Visual C++ 2015-2022 instalado correctamente.`n"
-}
-
-# === DESCARGAR E INSTALAR SQUIRRELMAIL ===
-if (-Not (Test-Path $squirrelTargetPath)) {
-    Write-Host "Descargando SquirrelMail 1.4.22..."
-    Invoke-WebRequest -Uri $squirrelUrl -OutFile $squirrelZipPath
-
-    Write-Host "Extrayendo SquirrelMail..."
-    Expand-Archive -Path $squirrelZipPath -DestinationPath $squirrelTempExtract -Force
-
-    Move-Item -Path "$squirrelTempExtract\squirrelmail-webmail-1.4.22" -Destination $squirrelTargetPath
-} else {
-    Write-Host "SquirrelMail ya está instalado en $squirrelTargetPath"
-}
-
-# Copiar configuración por defecto si no existe
-if (-Not (Test-Path $squirrelConfig)) {
-    Copy-Item $squirrelDefaultConfig $squirrelConfig
-    Write-Host "Archivo config.php creado desde config_default.php"
-}
-
-# Asignar permisos a IIS_IUSRS para evitar errores 403
-$sid = New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-568")  # SID para IIS_IUSRS
-$account = $sid.Translate([System.Security.Principal.NTAccount])
-icacls $squirrelTargetPath /grant ($account + ":(OI)(CI)(RX)") /T | Out-Null
-Write-Host "Permisos asignados a IIS_IUSRS sobre la carpeta SquirrelMail.`n"
-
-Write-Host "PHP y SquirrelMail instalados correctamente."
-Write-Host "Accede a SquirrelMail en: http://localhost/squirrelmail"
-Write-Host "Verifica que PHP esté registrado en IIS como FastCGI si no lo has hecho."
-
-# Ruta a php-cgi.exe
-$phpCgiPath = "C:\PHP\php-cgi.exe"
-
-# Verificar si FastCGI ya está registrado
-$fcgiList = & "$env:windir\system32\inetsrv\appcmd.exe" list config -section:system.webServer/fastCgi
-if ($fcgiList -notmatch [regex]::Escape($phpCgiPath)) {
-    Write-Host "Registrando PHP como aplicación FastCGI en IIS..."
-    & "$env:windir\system32\inetsrv\appcmd.exe" set config /section:system.webServer/fastCgi /+"[fullPath='$phpCgiPath']"
-} else {
-    Write-Host "PHP ya está registrado como FastCGI."
-}
-
-# Registrar el handler mapping para .php (con resourceType = File para evitar 'No input file specified')
-Write-Host "Agregando handler mapping para .php..."
-& "$env:windir\system32\inetsrv\appcmd.exe" set config -section:handlers `
-    /+"[name='PHP_via_FastCGI',path='*.php',verb='GET,POST,HEAD',modules='FastCgiModule',scriptProcessor='$phpCgiPath',resourceType='File']" `
-    /commit:apphost
-
-# Reiniciar IIS para aplicar los cambios
-iisreset
