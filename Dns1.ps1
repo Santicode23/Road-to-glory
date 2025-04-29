@@ -1,64 +1,85 @@
-﻿# Definir los parámetros que tendra la dns
-$Dominio = Read-Host "Ingrese el nombre del dominio"
-$NombreZona = "$Dominio.dns"
-$IPDestino = Read-Host "Ingrese la dirección IP de la máquina virtual"
+function validar_ip {
+    param (
+        [string]$ip
+    )
 
-# Validar de la dirección IP impuesta por el servidor
-if (-not ($IPDestino -match "^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$")) {
-    Write-Host "Error: La dirección IP ingresada no es válida." -ForegroundColor Red
-    exit
+    $regex = "^((25[0-4]|2[0-4][0-9]|1?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|1?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|1?[0-9][0-9]?)\.(25[0-4]|2[0-4][0-9]|1?[0-9][0-9]?))$"
+    
+    return $ip -match $regex
 }
 
-$partes = $IPDestino -split "\."
+function validar_dominio {
+    param (
+        [string]$dominio
+    )
+
+    $regex = '^(?:[a-zA-Z0-9-]{4,}\.)+(com|net|edu|blog|mx|tech|site)$'
+
+    return $dominio -match $regex
+}
+
+Write-Host "Bienvenido a la configuración de tu servidor DNS"
+
+# Pedir dominio hasta que sea válido
+do{
+    $dominio = Read-Host "Introduce el nombre de dominio que deseas configurar"
+    if (-not(validar_dominio $dominio)) {
+        Write-Output "Dominio no válido."
+    } else {
+        Write-Output "Dominio valido. $dominio"
+    }
+} until (validar_dominio $dominio)
+
+# Pedir IP hasta que sea válida
+do {
+    $ip = Read-Host "Introduce la dirección IP de tu servidor DNS"
+    if (-not(validar_ip $ip)) {
+        Write-Output "IP no válida."
+        break
+    } else {
+        Write-Output "IP valida: $ip"
+    }
+} until (validar_ip $ip)
+
+$partes = $ip -split "\."
 $partes[3] = "0"
 $IPScope = ($partes[0..2] -join ".") + ".0/24"
 $NetworkID = ($partes[2..0] -join ".") + ".in-addr.arpa.dns"
+Write-Host "Dirección IP separada por partes" -ForegroundColor Green
+#Fijar IP
+Write-Host "Fijando IP..." -ForegroundColor Green
+New-NetIPAddress -IPAddress $ip -InterfaceAlias "Ethernet 2" -PrefixLength 24
 
-New-NetIPAddress -IPAddress $IPDestino -InterfaceAlias "Ethernet 2" -PrefixLength 24
+#Instalar servidor DNS
+Write-Host "Instalando servidor DNS..." -ForegroundColor Green
+Install-WindowsFeature -Name DNS -IncludeManagementTools
 
-# Validación del dominio
-if (-not ($Dominio -match "^(?:[a-zA-Z0-9]+\.)+[a-zA-Z]{2,}$")) {
-    Write-Host "Error: El dominio ingresado no es válido." -ForegroundColor Red
-    exit
-}
+#Configurar zona principal
+Write-Host "Configurando zona principal..." -ForegroundColor Green
+Add-DnsServerPrimaryZone -Name $dominio -ZoneFile "$dominio.dns" -DynamicUpdate None -PassThru 
 
-# Validación del nombre del fichero de zona
-if (-not ($NombreZona -match "^[a-zA-Z0-9._-]+\.dns$")) {
-    Write-Host "Error: El nombre del fichero de zona no es válido." -ForegroundColor Red
-    exit
-}
-
-# Instalar la función de DNS Server
-if (-not (Get-WindowsFeature -Name DNS -ErrorAction SilentlyContinue).Installed) {
-    Install-WindowsFeature -Name DNS -IncludeManagementTools
-    Write-Host "Función DNS instalada correctamente." -ForegroundColor Green
-}
-
-# Crear la zona de búsqueda directa
-Add-DnsServerPrimaryZone -Name $Dominio -ZoneFile $NombreZona -DynamicUpdate None -PassThru
-Write-Host "Zona primaria creada: $Dominio" -ForegroundColor Green
-
- #Configurar zona inversa
-Write-Host "Configurando zona inversa..."
+#Configurar zona inversa
+Write-Host "Configurando zona inversa..." -ForegroundColor Green
 Add-DnsServerPrimaryZone -NetworkID $IPScope -ZoneFile $NetworkID -DynamicUpdate None -PassThru
 
-# Agregar el registro A para el dominio
-Add-DnsServerResourceRecordA -Name "@" -ZoneName $Dominio -IPv4Address $IPDestino -CreatePtr -PassThru
-Write-Host "Registro A agregado para $Dominio con IP $IPDestino" -ForegroundColor Green
+#Crear registro A para dominio principal
+Write-Host "Creando registro A para dominio principal: $dominio" -ForegroundColor Green
+Add-DnsServerResourceRecordA -Name "@" -ZoneName $dominio -IPv4Address $ip -CreatePtr -PassThru
 
-# Agregar el registro A para www.$Dominio
-Add-DnsServerResourceRecordA -Name "www" -ZoneName $Dominio -IPv4Address $IPDestino -CreatePtr -PassThru
-Write-Host "Registro A agregado para www.$Dominio con IP $IPDestino" -ForegroundColor Green
+#Crear registro para www
+Write-Host "Creando registro A para www.$dominio" -ForegroundColor Green
+Add-DnsServerResourceRecordA -Name "www" -ZoneName $dominio -IPv4Address $ip -CreatePtr -PassThru
 
 #Configurar máquina como servidor DNS
-Write-Host "Configurando máquina como servidor DNS..."
-Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses $IPDestino
+Write-Host "Configurando máquina como servidor DNS..." -ForegroundColor Green
+Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses $ip
+Set-DnsClientServerAddress -InterfaceAlias "Ethernet 2" -ServerAddresses $ip
 
-# Reiniciar el servicio DNS
-Restart-Service DNS
-Write-Host "Servicio DNS reiniciado correctamente." -ForegroundColor Green
-
-Write-Host "Configuración completada exitosamente." -ForegroundColor Cyan
+#Reiniciar servicio DNS
+Write-Host "Reiniciando servicio DNS..." -ForegroundColor Green
+Restart-Service -Name DNS
 
 #Habilitar pruebas ping 
 New-NetFirewallRule -DisplayName "Allow ICMPv4-In" -Protocol ICMPv4 -Direction Inbound -Action Allow
+
+Write-Host "Configuración finalizada. Puedes probar tu servidor DNS :)" -ForegroundColor Green
