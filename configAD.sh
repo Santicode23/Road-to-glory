@@ -1,41 +1,52 @@
 #!/bin/bash
-# Script para unir Linux Mint a un dominio Active Directory
 
-# 1. Instalar los paquetes necesarios
-sudo apt update 
-sudo apt install -y realmd sssd sssd-tools libnss-sss libpam-sss \
-oddjob oddjob-mkhomedir adcli samba-common-bin krb5-user packagekit
+echo ""
+echo "CONFIGURACION DEL CLIENTE LINUX (MINT) PARA PODERSE CONECTAR/LOGGEAR A ACTIVE DIRECTORY :)"
 
-# 2. Descubrir el dominio
-echo "Descubriendo el dominio..."
-realm discover pedimospizza.com
+IP_ADSERVER="192.168.0.122"
+DOMINIO_AD="pedimospizza.com"
 
-# 3. Unir al dominio (reemplaza 'Administrador')
-sudo realm join --user=Administrador pedimospizza.com
+sudo apt update
 
-# 4. Checar si el dominio fue unido correctamente
-sudo realm list
+#Paquetes necesarios para integrar Ubuntu con AD
+sudo apt install realmd sssd sssd-ad sssd-tools samba-common-bin adcli packagekit
 
-# 5. Permitir que todos los usuarios del dominio puedan iniciar sesión
-sudo realm permit --all
-
-# 6. Configurar LightDM para permitir ingreso manual
-echo "Configurando LightDM para inicio de sesión manual..."
-LIGHTDM_CONF="/etc/lightdm/lightdm.conf"
-sudo mkdir -p "$(dirname $LIGHTDM_CONF)"
-if ! grep -Fxq "greeter-show-manual-login=true" "$LIGHTDM_CONF"; then
-    echo -e "\n[Seat:*]\ngreeter-show-manual-login=true" | sudo tee -a "$LIGHTDM_CONF"
+#Configuramos el servidor NTP para que el equipo sincronice su hora con el controlador de dominio 
+#(es obligatorio que tengan hora similar para que la autenticación funcione)
+if grep -q "^[#]*NTP=" /etc/systemd/timesyncd.conf; then
+    sudo sed -i "s/^[#]*NTP=.*/NTP=$IP_ADSERVER/" /etc/systemd/timesyncd.conf
+else
+    sudo sed -i "/^\[Time\]/a NTP=$IP_ADSERVER" /etc/systemd/timesyncd.conf
 fi
 
-# 7. Habilitar mkhomedir en PAM
-echo "Configurando pam_mkhomedir..."
-PAM_LINE="session required pam_mkhomedir.so skel=/etc/skel umask=0077"
-if ! grep -Fxq "$PAM_LINE" /etc/pam.d/common-session; then
-    echo "$PAM_LINE" | sudo tee -a /etc/pam.d/common-session
-fi
+#Cambiar el nameserver para que apunte al servidor AD
+sudo sed -i "/^nameserver /c\nameserver $IP_ADSERVER" /etc/resolv.conf    
+#Cambiar el dominio de búsqueda (search) para que poder resolver nombres sin poner el dominio completo
+sudo sed -i "/^search /c\search $DOMINIO_AD" /etc/resolv.conf
 
-# 8. Reiniciar servicios para aplicar cambios
-sudo systemctl restart sssd
-sudo systemctl restart lightdm
+#Buscamos información sobre el dominio, como su nombre real, controlador, y si podemos unir el cliente
+sudo realm discover $DOMINIO_AD		
 
-echo "El equipo está unido al dominio"
+#Une el equipo al dominio usando el usuario Administrador
+sudo realm join -v -U Administrador $DOMINIO_AD	        #pide la contraseña de ese usuario en AD. Si todo sale bien, el cliente se une al dominio.
+
+#Información sobre el dominio al que nos unimos
+sudo realm list		#deberia mostrar detalle del AD y el dominio
+#Confirmacion de que sssd esta funcionando
+sudo systemctl status sssd
+
+#PARA CALAR SI DETECTA EL USUARIO: id paolar@renteria.com, debe salir algo asi: "root@adminus:/home/paolarus# id paolar@renteria.com
+#uid=1182401103(paolar@renteria.com) gid=1182400513(usuarios del dominio@renteria.com) grupos=1182400513(usuarios del dominio@renteria.com)"
+
+#es para que cuando un usuario del dominio inicie sesión por primera vez, se cree automáticamente su carpeta /home/usuario.
+sudo pam-auth-update --enable mkhomedir
+
+#Para que permita loggearse con el usuario y contraseña, estas líneas modifican la configuración de LightDM (el gestor de inicio de sesión gráfico)
+grep -q "greeter-show-manual-login=true" /etc/lightdm/lightdm.conf || \
+sudo sh -c "echo 'greeter-show-manual-login=true' >> /etc/lightdm/lightdm.conf"     #muestra el campo para escribir usuario y contraseña manualmente
+
+grep -q "greeter-hide-users=true" /etc/lightdm/lightdm.conf || \
+sudo sh -c "echo 'greeter-hide-users=true' >> /etc/lightdm/lightdm.conf"        #oculta la lista de usuarios locales
+
+#REINICIO DEL CLIENTE
+sudo reboot
