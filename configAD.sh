@@ -8,10 +8,10 @@ oddjob oddjob-mkhomedir adcli samba-common-bin krb5-user packagekit
 
 # 2. Descubrir el dominio
 echo "Descubriendo el dominio..."
-realm discover andycast.local
+realm discover pedimospizza.com
 
 # 3. Unir al dominio (reemplaza 'Administrador')
-sudo realm join --user=Administrador andycast.local
+sudo realm join --user=Administrator pedimospizza.com
 
 # 4. Checar si el dominio fue unido correctamente
 sudo realm list
