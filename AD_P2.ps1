@@ -1,4 +1,4 @@
-Import-Module "C:\Users\Administrator\Desktop\Windows2025lib.ps1"
+Import-Module "C:\Users\Administrator\Desktop\libreriawindows.ps1"
 
 Import-Module ActiveDirectory
 $domain = Get-ADDomain
