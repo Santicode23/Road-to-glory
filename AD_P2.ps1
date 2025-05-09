@@ -167,7 +167,7 @@ foreach ($user in $users) {
 }
 
 # Para que pueda cambiarla
-Set-ADDefaultDomainPasswordPolicy -Identity "reprobados.com" -MinPasswordAge 0.00:00:00
+Set-ADDefaultDomainPasswordPolicy -Identity "pedimospizza.com" -MinPasswordAge 0.00:00:00
 
 # Forzar actualización de políticas
 Invoke-GPUpdate -Force
