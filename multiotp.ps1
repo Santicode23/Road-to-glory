@@ -1,6 +1,6 @@
 # CONFIGURACIÓN INICIAL
 
-$dnsName = "WINSERVER2025.reprobados.com"
+$dnsName = "WINSERVER2025.pedimospizza.com"
 $subject = "CN=$dnsName"
 $storeMy = "Cert:\LocalMachine\My"
 $storeRoot = "Cert:\LocalMachine\Root"
