@@ -17,7 +17,7 @@ function CreaEstructura {
 
 function CrearUO {
 
-    $dominioLDAP="DC=lilsdomain,DC=local"
+    $dominioLDAP="DC=pedimospizza,DC=com"
     CreaEstructura "CUATES" $dominioLDAP
     CreaEstructura "NO_CUATES" $dominioLDAP
 
@@ -69,3 +69,7 @@ function CrearUsuarios {
    $logon4 = Read-Host "Ingrese el logon name del segundo usuario de NO_CUATES"
    NuevoUsuario -NombreUsuario $user4 -NombreLogon $logon4 -UO "NO_CUATES"
 }
+
+CrearUO
+CrearUsuarios
+
