@@ -29,8 +29,8 @@ instalar_docker() {
 # OPCIONAL
 agg_usuario_a_docker(){
 
-    sudo usermod -aG docker lilc
-    su - lilc
+    sudo usermod -aG docker santi7
+    su - santi7
     id -nG
 }
 
@@ -91,5 +91,15 @@ conectar_contenedores() {
 
 }
 
+# FUNCIÓN PRINCIPAL QUE LLAMA A TODO
+main() {
+    instalar_docker
+    agg_usuario_a_docker
+    instalar_apache
+    modificar_apache
+    conectar_contenedores
+    echo "=== PROCESO COMPLETADO ==="
+}
 
-echo "=== CONFIGURACION COMPLETADA ==="
+# LLAMADA A LA FUNCIÓN PRINCIPAL
+main
