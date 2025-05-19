@@ -29,8 +29,8 @@ instalar_docker() {
 # OPCIONAL
 agg_usuario_a_docker(){
 
-    sudo usermod -aG docker santi7
-    su - santi7
+    sudo usermod -aG docker lilc
+    su - lilc
     id -nG
 }
 
@@ -51,10 +51,10 @@ modificar_apache() {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>APACHE MODIFICADO</title>
+    <title>APACHE CUSTOMIZADO</title>
 </head>
 <body>
-    <h1>HALA MADRID</h1>
+    <h1>PA QUE SIGAN HABLANDO</h1>
 </body>
 </html>
 EOF
@@ -89,17 +89,12 @@ conectar_contenedores() {
     -e POSTGRES_DB=bd2 \
     postgres:latest
 
+    # Probando la conexion
+    # Entrando a postgres1
+    # sudo docker exec -it postgres1 bash
 }
 
-# FUNCIÓN PRINCIPAL QUE LLAMA A TODO
-main() {
-    instalar_docker
-    agg_usuario_a_docker
-    instalar_apache
-    modificar_apache
-    conectar_contenedores
-    echo "=== PROCESO COMPLETADO ==="
-}
-
-# LLAMADA A LA FUNCIÓN PRINCIPAL
-main
+instalar_docker
+instalar_apache
+modificar_apache
+conectar_contenedores
