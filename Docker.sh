@@ -51,10 +51,10 @@ modificar_apache() {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>APACHE CUSTOMIZADO</title>
+    <title>APACHE</title>
 </head>
 <body>
-    <h1>PA QUE SIGAN HABLANDO</h1>
+    <h1>HALA MADRID</h1>
 </body>
 </html>
 EOF
